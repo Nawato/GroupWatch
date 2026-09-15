@@ -1,0 +1,11 @@
+## Interface: 120100
+## Title: GroupWatch
+## Notes: Monitors players in groups based on customizable lists, sounds, and notifications.
+## Notes-deDE: Überwacht Spieler in Gruppen basierend auf anpassbaren Listen, Sounds und Nachrichten.
+## Author: DeinName
+## Version: 2.0
+## SavedVariables: GroupWatchDB
+## OptionalDeps: EllesmereUI, ElvUI
+
+Locales.lua
+GroupWatch.lua
