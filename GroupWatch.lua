@@ -59,6 +59,10 @@ local function InitDB()
             angle = 225
         }
     end
+
+    for _, listData in pairs(GroupWatchDB.lists) do
+        listData.notes = listData.notes or {}
+    end
 end
 
 local function GetFullName(unitOrName)
@@ -91,6 +95,7 @@ local function AddPlayer(listName, fullName)
     end
 
     GroupWatchDB.lists[listName].players[fullName] = true
+    GroupWatchDB.lists[listName].notes = GroupWatchDB.lists[listName].notes or {}
     print("|cff00ff00[GroupWatch]|r " .. string.format(L["MSG_PLAYER_ADDED"], fullName, listName))
     if GroupWatchUI and GroupWatchUI:IsShown() then GroupWatchUI:Refresh() end
 end
@@ -105,6 +110,9 @@ local function RemovePlayer(fullName, listName)
         if not listName or listName == lName then
             if lData.players[fullName] then
                 lData.players[fullName] = nil
+                if lData.notes then
+                    lData.notes[fullName] = nil
+                end
                 print("|cffff0000[GroupWatch]|r " .. string.format(L["MSG_PLAYER_REMOVED"], fullName, lName))
             end
         end
@@ -127,10 +135,27 @@ local function CreateList(listName)
         message = L["DEFAULT_GROUP_MSG"],
         sound = DEFAULT_SOUND,
         collapsed = false,
-        players = {}
+        players = {},
+        notes = {}
     }
     selectedList = listName
     print("|cff00ff00[GroupWatch]|r " .. string.format(L["MSG_LIST_CREATED"], listName))
+    if GroupWatchUI and GroupWatchUI:IsShown() then GroupWatchUI:Refresh() end
+end
+
+local function SavePlayerNote(listName, playerName, note)
+    InitDB()
+    local listData = GroupWatchDB.lists[listName]
+    if not listData or not listData.players or not listData.players[playerName] then return end
+
+    listData.notes = listData.notes or {}
+    note = (note or ""):gsub("^%s+", ""):gsub("%s+$", "")
+    if note == "" then
+        listData.notes[playerName] = nil
+    else
+        listData.notes[playerName] = note
+    end
+
     if GroupWatchUI and GroupWatchUI:IsShown() then GroupWatchUI:Refresh() end
 end
 
@@ -197,6 +222,38 @@ StaticPopupDialogs["GROUPWATCH_NEW_LIST"] = {
             CreateList(text)
         end
         self:GetParent():Hide()
+    end,
+    timeout = 0,
+    whileDead = true,
+    hideOnEscape = true,
+    preferredIndex = 3,
+}
+
+StaticPopupDialogs["GROUPWATCH_EDIT_NOTE"] = {
+    text = L["DIALOG_EDIT_NOTE_TEXT"],
+    button1 = L["DIALOG_SAVE"],
+    button2 = L["DIALOG_CANCEL"],
+    hasEditBox = true,
+    OnShow = function(self)
+        self:SetSize(400, 180)
+        self.EditBox:ClearAllPoints()
+        self.EditBox:SetPoint("TOPLEFT", self, "TOPLEFT", 20, -45)
+        self.EditBox:SetPoint("BOTTOMRIGHT", self, "BOTTOMRIGHT", -20, 55)
+        self.EditBox:SetMultiLine(true)
+    end,
+    OnAccept = function(self)
+        local data = self.data
+        if data then
+            SavePlayerNote(data.listName, data.playerName, self.EditBox:GetText())
+        end
+    end,
+    EditBoxOnEnterPressed = function(self)
+        local parent = self:GetParent()
+        local data = parent.data
+        if data then
+            SavePlayerNote(data.listName, data.playerName, self:GetText())
+        end
+        parent:Hide()
     end,
     timeout = 0,
     whileDead = true,
@@ -305,7 +362,6 @@ local function SkinWindow(f)
 
     if f.closeBtn then SkinCloseButton(f.closeBtn) end
     if f.scrollBar then SkinScrollBar(f.scrollBar) end
-    if f.dropDownBtn then SkinButton(f.dropDownBtn) end
     if f.newListBtn then SkinButton(f.newListBtn) end
     if f.delListBtn then SkinButton(f.delListBtn) end
 end
@@ -359,17 +415,23 @@ local function CreateUI()
     closeBtn:SetPoint("TOPRIGHT", f, "TOPRIGHT", -5, -5)
     f.closeBtn = closeBtn
 
-    -- ScrollFrame for list area
-    local scrollFrame = CreateFrame("ScrollFrame", "GroupWatchScrollFrame", f, "UIPanelScrollFrameTemplate")
+    -- ScrollFrame for list area (no template = no visible scrollbar; mousewheel below)
+    local scrollFrame = CreateFrame("ScrollFrame", "GroupWatchScrollFrame", f)
     scrollFrame:SetPoint("TOPLEFT", f, "TOPLEFT", 15, -40)
-    scrollFrame:SetPoint("BOTTOMRIGHT", f, "BOTTOMRIGHT", -35, 65)
+    scrollFrame:SetPoint("BOTTOMRIGHT", f, "BOTTOMRIGHT", -15, 65)
 
-    local scrollBar = scrollFrame.ScrollBar or _G["GroupWatchScrollFrameScrollBar"]
+    scrollFrame:EnableMouseWheel(true)
+    scrollFrame:SetScript("OnMouseWheel", function(self, delta)
+        local current = self:GetVerticalScroll()
+        local max = self:GetVerticalScrollRange()
+        self:SetVerticalScroll(math.max(0, math.min(max, current - delta * 20)))
+    end)
+
     f.scrollFrame = scrollFrame
-    f.scrollBar = scrollBar
+    f.scrollBar = nil
 
     local content = CreateFrame("Frame", nil, scrollFrame)
-    content:SetSize(320, 100)
+    content:SetSize(340, 100)
     scrollFrame:SetScrollChild(content)
 
     f.content = content
@@ -378,30 +440,6 @@ local function CreateUI()
     ----------------------------------------------------
     -- FOOTER: LIST CONTROLS
     ----------------------------------------------------
-    local listLabel = f:CreateFontString(nil, "OVERLAY", "GameFontNormalLarge")
-    listLabel:SetPoint("BOTTOMLEFT", f, "BOTTOMLEFT", 20, 22)
-    listLabel:SetText("|cffffd100" .. L["LISTS_LABEL"] .. "|r")
-    f.listLabel = listLabel
-
-    local dropDownBtn = CreateFrame("Button", nil, f, "UIPanelButtonTemplate")
-    dropDownBtn:SetSize(170, 24)
-    dropDownBtn:SetPoint("LEFT", listLabel, "RIGHT", 10, 0)
-    dropDownBtn:SetText(GetDefaultListName())
-    f.dropDownBtn = dropDownBtn
-
-    dropDownBtn:SetScript("OnClick", function(self)
-        if MenuUtil and MenuUtil.CreateContextMenu then
-            MenuUtil.CreateContextMenu(self, function(ownerRegion, rootDescription)
-                InitDB()
-                for lName in pairs(GroupWatchDB.lists) do
-                    rootDescription:CreateButton(lName, function()
-                        selectedList = lName
-                        dropDownBtn:SetText(lName)
-                    end)
-                end
-            end)
-        end
-    end)
 
     -- "−" Delete list button (Right-aligned)
     local delListBtn = CreateFrame("Button", nil, f, "UIPanelButtonTemplate")
@@ -447,24 +485,27 @@ local function CreateUI()
         if not selectedList or not GroupWatchDB.lists[selectedList] then
             selectedList = GetDefaultListName()
         end
-        self.dropDownBtn:SetText(selectedList)
 
         local yOffset = -5
 
         for lName, lData in pairs(GroupWatchDB.lists) do
             if lData.collapsed == nil then lData.collapsed = false end
 
-            -- Header container
-            local headerRow = CreateFrame("Frame", nil, self.content)
-            headerRow:SetSize(320, 22)
+            -- Header container (Button so clicking the name/gap selects the list)
+            local headerRow = CreateFrame("Button", nil, self.content)
+            headerRow:SetSize(340, 22)
             headerRow:SetPoint("TOPLEFT", self.content, "TOPLEFT", 0, yOffset)
+            headerRow:SetScript("OnClick", function()
+                selectedList = lName
+                f:Refresh()
+            end)
             table.insert(self.widgets, headerRow)
 
             -- Collapse/Expand button [−] / [+]
             local collapseBtn = CreateFrame("Button", nil, headerRow)
             collapseBtn:SetSize(18, 18)
             collapseBtn:SetPoint("LEFT", headerRow, "LEFT", 0, 0)
-            
+
             local collapseText = collapseBtn:CreateFontString(nil, "OVERLAY", "GameFontNormal")
             collapseText:SetPoint("CENTER", collapseBtn, "CENTER", 0, 0)
             collapseText:SetText(lData.collapsed and "|cffffd100[+]|r" or "|cffffd100[−]|r")
@@ -475,10 +516,14 @@ local function CreateUI()
             end)
             SkinButton(collapseBtn)
 
-            -- List title
+            -- List title — white when selected, dim gold otherwise
             local headerText = headerRow:CreateFontString(nil, "OVERLAY", "GameFontNormalLarge")
             headerText:SetPoint("LEFT", collapseBtn, "RIGHT", 6, 0)
-            headerText:SetText("|cffffd100" .. lName .. "|r")
+            if selectedList == lName then
+                headerText:SetText("|cffffffff" .. lName .. "|r")
+            else
+                headerText:SetText("|cffaaaaaa" .. lName .. "|r")
+            end
             if skinEUI and skinEUI.Font then
                 skinEUI.Font(headerText)
             end
@@ -509,7 +554,8 @@ local function CreateUI()
             -- (+) Button to add player to list
             local addPlayerBtn = CreateFrame("Button", nil, headerRow, "UIPanelButtonTemplate")
             addPlayerBtn:SetSize(22, 20)
-            addPlayerBtn:SetPoint("RIGHT", headerRow, "RIGHT", 0, 0)
+            addPlayerBtn:SetPoint("TOP", headerRow, "TOP", 0, 0)
+            addPlayerBtn:SetPoint("RIGHT", f, "RIGHT", -20, 0)
             addPlayerBtn:SetText("|cff00ff00+|r")
             addPlayerBtn:SetScript("OnClick", function()
                 local dialog = StaticPopup_Show("GROUPWATCH_NEW_PLAYER")
@@ -552,8 +598,9 @@ local function CreateUI()
 
                         -- (−) Remove player button per row
                         local del = CreateFrame("Button", nil, self.content, "UIPanelButtonTemplate")
-                        del:SetSize(20, 18)
-                        del:SetPoint("LEFT", row, "RIGHT", 4, 0)
+                        del:SetSize(22, 20)
+                        del:SetPoint("RIGHT", addPlayerBtn, "RIGHT", 0, 0)
+                        del:SetPoint("TOP", row, "TOP", 0, 0)
                         del:SetText("|cffff5555−|r")
 
                         del:SetScript("OnClick", function()
@@ -561,6 +608,37 @@ local function CreateUI()
                         end)
                         SkinButton(del)
                         table.insert(self.widgets, del)
+
+                        local noteText = lData.notes and lData.notes[pName]
+                        local noteBtn = CreateFrame("Button", nil, self.content, "UIPanelButtonTemplate")
+                        noteBtn:SetSize(22, 20)
+                        noteBtn:SetPoint("RIGHT", del, "LEFT", -2, 0)
+                        noteBtn:SetText("|cffd9b44aN|r")
+                        noteBtn:SetScript("OnClick", function()
+                            local dialog = StaticPopup_Show("GROUPWATCH_EDIT_NOTE", pName)
+                            if dialog then
+                                dialog.data = {
+                                    listName = lName,
+                                    playerName = pName,
+                                }
+                                dialog.EditBox:SetText(noteText or "")
+                                dialog.EditBox:HighlightText()
+                            end
+                        end)
+                        noteBtn:SetScript("OnEnter", function(selfBtn)
+                            GameTooltip:SetOwner(selfBtn, "ANCHOR_RIGHT")
+                            if noteText and noteText ~= "" then
+                                GameTooltip:SetText(string.format(L["NOTE_TOOLTIP"], noteText), 1, 1, 1, true)
+                            else
+                                GameTooltip:SetText(L["NOTE_TOOLTIP_EMPTY"], 1, 1, 1, true)
+                            end
+                            GameTooltip:Show()
+                        end)
+                        noteBtn:SetScript("OnLeave", function()
+                            GameTooltip:Hide()
+                        end)
+                        SkinButton(noteBtn)
+                        table.insert(self.widgets, noteBtn)
 
                         yOffset = yOffset - 24
                     end
@@ -845,11 +923,13 @@ end
 -- CONTEXT MENU (Right-click)
 ----------------------------------------------------
 if Menu and Menu.ModifyMenu then
-    Menu.ModifyMenu("MENU_UNIT_PLAYER", function(ownerRegion, rootDescription, contextData)
-        if not contextData or not contextData.name then return end
-        local name = contextData.name
-        local realm = contextData.server
-        
+    local function GroupWatchMenuHandler(ownerRegion, rootDescription, contextData)
+        if not contextData or not contextData.unit then return end
+        local unit = contextData.unit
+
+        local name, realm = UnitName(unit)
+        if not name or name == "" then return end
+
         if not realm or realm == "" then
             realm = GetRealmName():gsub("%s+", "")
         end
@@ -871,7 +951,11 @@ if Menu and Menu.ModifyMenu then
                 end)
             end
         end
-    end)
+    end
+
+    Menu.ModifyMenu("MENU_UNIT_PLAYER", GroupWatchMenuHandler)
+    Menu.ModifyMenu("MENU_UNIT_PARTY",  GroupWatchMenuHandler)
+    Menu.ModifyMenu("MENU_UNIT_RAID_PLAYER", GroupWatchMenuHandler)
 end
 
 if IsLoggedIn and IsLoggedIn() then

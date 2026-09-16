@@ -56,6 +56,8 @@ local enUS = {
     DIALOG_CREATE = "Create",
     DIALOG_DELETE_LIST_TEXT = "Do you really want to delete the list '%s'?",
     DIALOG_DELETE = "Delete",
+    DIALOG_EDIT_NOTE_TEXT = "Note for %s:",
+    DIALOG_SAVE = "Save",
 
     -- Tooltips & Menus
     TOOLTIP_LEFT_CLICK = "Left-click: |cffffffffToggle window|r",
@@ -66,6 +68,10 @@ local enUS = {
     CONTEXT_REMOVE = "Remove",
     CONTEXT_ADD = "Add",
     CONTEXT_LIST = "List: %s",
+
+    -- Notes
+    NOTE_TOOLTIP = "Note: %s\n\nClick to edit",
+    NOTE_TOOLTIP_EMPTY = "No note — click to add",
 }
 
 for k, v in pairs(enUS) do
@@ -119,6 +125,8 @@ if locale == "deDE" then
     L["DIALOG_CREATE"] = "Erstellen"
     L["DIALOG_DELETE_LIST_TEXT"] = "Möchtest du die Liste '%s' wirklich löschen?"
     L["DIALOG_DELETE"] = "Löschen"
+    L["DIALOG_EDIT_NOTE_TEXT"] = "Notiz für %s:"
+    L["DIALOG_SAVE"] = "Speichern"
 
     L["TOOLTIP_LEFT_CLICK"] = "Linksklick: |cffffffffFenster öffnen/schließen|r"
     L["TOOLTIP_RIGHT_CLICK"] = "Rechtsklick: |cffffffffListen-Übersicht|r"
@@ -128,6 +136,9 @@ if locale == "deDE" then
     L["CONTEXT_REMOVE"] = "Entfernen"
     L["CONTEXT_ADD"] = "Hinzufügen"
     L["CONTEXT_LIST"] = "Liste: %s"
+
+    L["NOTE_TOOLTIP"] = "Notiz: %s\n\nKlicken zum Bearbeiten"
+    L["NOTE_TOOLTIP_EMPTY"] = "Keine Notiz — klicken zum Hinzufügen"
 
 -- =========================================================================
 -- French (frFR)
