@@ -1163,7 +1163,7 @@ if Menu and Menu.ModifyMenu then
 end
 
 ----------------------------------------------------
--- TOOLTIP (Hovering over player or playerframe)
+-- TOOLTIP (Hovering over player, unit frames & Group Finder)
 ----------------------------------------------------
 local function GetPlayerFullNameFromTooltip(tooltip, data)
     local unit, name
@@ -1191,7 +1191,7 @@ local function GetPlayerFullNameFromTooltip(tooltip, data)
         return GetPlayerFullNameFromUnit(unit)
     end
 
-    -- Fallback 1: via GUID if data is provided and is a player
+    -- Fallback 1: via GUID
     if data and data.guid and type(data.guid) == "string" and data.guid:find("^Player%-") and GetPlayerInfoByGUID then
         local ok, _, _, _, _, _, pName, pRealm = pcall(GetPlayerInfoByGUID, data.guid)
         if ok and pName and pName ~= "" then
@@ -1204,7 +1204,7 @@ local function GetPlayerFullNameFromTooltip(tooltip, data)
         end
     end
 
-    -- Fallback 2: via name if available
+    -- Fallback 2: Direct name matching
     if name and name ~= "" and not name:find("#") then
         return GetFullName(name)
     end
@@ -1212,12 +1212,9 @@ local function GetPlayerFullNameFromTooltip(tooltip, data)
     return nil
 end
 
-local function OnTooltipSetUnit(tooltip, data)
-    if not tooltip or not tooltip.AddLine then return end
+local function AppendNotesToTooltip(tooltip, fullName)
+    if not tooltip or not tooltip.AddLine or not fullName then return end
     if not GroupWatchDB or not GroupWatchDB.lists then return end
-
-    local fullName = GetPlayerFullNameFromTooltip(tooltip, data)
-    if not fullName then return end
 
     local name = strsplit("-", fullName, 2)
 
@@ -1243,6 +1240,7 @@ local function OnTooltipSetUnit(tooltip, data)
 
     local noteHeader = L["NOTE_HEADER"] or "Note"
 
+    tooltip:AddLine(" ") -- Leerzeile zur Abtrennung
     for _, entry in ipairs(entries) do
         if entry.note then
             if IsDefaultList(entry.list) then
@@ -1254,15 +1252,52 @@ local function OnTooltipSetUnit(tooltip, data)
             tooltip:AddLine(string.format("|cff00ccffGroupWatch:|r |cffffd100%s|r", entry.list), 1, 1, 1, true)
         end
     end
+    tooltip:Show()
 end
 
-if TooltipDataProcessor and TooltipDataProcessor.AddTooltipPostCall and Enum and Enum.TooltipDataType and Enum.TooltipDataType.Unit then
-    TooltipDataProcessor.AddTooltipPostCall(Enum.TooltipDataType.Unit, OnTooltipSetUnit)
+local function OnTooltipSetUnit(tooltip, data)
+    local fullName = GetPlayerFullNameFromTooltip(tooltip, data)
+    if fullName then
+        AppendNotesToTooltip(tooltip, fullName)
+    end
+end
+
+-- Hook für Unit-Tooltips (Sprechblasen, Frames)
+if TooltipDataProcessor and TooltipDataProcessor.AddTooltipPostCall and Enum and Enum.TooltipDataType then
+    if Enum.TooltipDataType.Unit then
+        TooltipDataProcessor.AddTooltipPostCall(Enum.TooltipDataType.Unit, OnTooltipSetUnit)
+    end
+    
+    -- Hook für Group Finder Search Results
+    if Enum.TooltipDataType.GroupFinderSearchResult then
+        TooltipDataProcessor.AddTooltipPostCall(Enum.TooltipDataType.GroupFinderSearchResult, function(tooltip, data)
+            if not data or not data.id then return end
+            local searchResult = C_LFGList.GetSearchResultInfo(data.id)
+            if searchResult and searchResult.leaderName then
+                local fullName = GetFullName(searchResult.leaderName)
+                if fullName then
+                    AppendNotesToTooltip(tooltip, fullName)
+                end
+            end
+        end)
+    end
 elseif GameTooltip and GameTooltip.HookScript then
     GameTooltip:HookScript("OnTooltipSetUnit", function(self)
         OnTooltipSetUnit(self)
     end)
 end
+
+-- Hook für LFG / GroupFinder Mitgliedermouseover (LFGList)
+hooksecurefunc("LFGListUtil_SetSearchEntryTooltip", function(tooltip, resultID)
+    if not resultID then return end
+    local searchResult = C_LFGList.GetSearchResultInfo(resultID)
+    if searchResult and searchResult.leaderName then
+        local fullName = GetFullName(searchResult.leaderName)
+        if fullName then
+            AppendNotesToTooltip(tooltip, fullName)
+        end
+    end
+end)
 
 if IsLoggedIn and IsLoggedIn() then
     InitDB()
