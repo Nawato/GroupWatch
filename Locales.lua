@@ -70,6 +70,7 @@ local enUS = {
     CONTEXT_LIST = "List: %s",
 
     -- Notes
+    NOTE_HEADER = "Note",
     NOTE_TOOLTIP = "Note: %s\n\nClick to edit",
     NOTE_TOOLTIP_EMPTY = "No note — click to add",
 }
@@ -137,6 +138,7 @@ if locale == "deDE" then
     L["CONTEXT_ADD"] = "Hinzufügen"
     L["CONTEXT_LIST"] = "Liste: %s"
 
+    L["NOTE_HEADER"] = "Notiz"
     L["NOTE_TOOLTIP"] = "Notiz: %s\n\nKlicken zum Bearbeiten"
     L["NOTE_TOOLTIP_EMPTY"] = "Keine Notiz — klicken zum Hinzufügen"
 
@@ -185,6 +187,8 @@ elseif locale == "frFR" then
     L["DIALOG_CREATE"] = "Créer"
     L["DIALOG_DELETE_LIST_TEXT"] = "Voulez-vous vraiment supprimer la liste « %s » ?"
     L["DIALOG_DELETE"] = "Supprimer"
+    L["DIALOG_EDIT_NOTE_TEXT"] = "Note pour %s :"
+    L["DIALOG_SAVE"] = "Enregistrer"
 
     L["TOOLTIP_LEFT_CLICK"] = "Clic gauche : |cffffffffOuvrir/fermer la fenêtre|r"
     L["TOOLTIP_RIGHT_CLICK"] = "Clic droit : |cffffffffAperçu des listes|r"
@@ -194,6 +198,10 @@ elseif locale == "frFR" then
     L["CONTEXT_REMOVE"] = "Retirer"
     L["CONTEXT_ADD"] = "Ajouter"
     L["CONTEXT_LIST"] = "Liste : %s"
+
+    L["NOTE_HEADER"] = "Note"
+    L["NOTE_TOOLTIP"] = "Note : %s\n\nCliquer pour modifier"
+    L["NOTE_TOOLTIP_EMPTY"] = "Aucune note — cliquer pour ajouter"
 
 -- =========================================================================
 -- Spanish (esES & esMX)
@@ -240,6 +248,8 @@ elseif locale == "esES" or locale == "esMX" then
     L["DIALOG_CREATE"] = "Crear"
     L["DIALOG_DELETE_LIST_TEXT"] = "¿Seguro que quieres eliminar la lista '%s'?"
     L["DIALOG_DELETE"] = "Eliminar"
+    L["DIALOG_EDIT_NOTE_TEXT"] = "Nota para %s:"
+    L["DIALOG_SAVE"] = "Guardar"
 
     L["TOOLTIP_LEFT_CLICK"] = "Clic izquierdo: |cffffffffAbrir/cerrar ventana|r"
     L["TOOLTIP_RIGHT_CLICK"] = "Clic derecho: |cffffffffResumen de listas|r"
@@ -249,6 +259,10 @@ elseif locale == "esES" or locale == "esMX" then
     L["CONTEXT_REMOVE"] = "Eliminar"
     L["CONTEXT_ADD"] = "Añadir"
     L["CONTEXT_LIST"] = "Lista: %s"
+
+    L["NOTE_HEADER"] = "Nota"
+    L["NOTE_TOOLTIP"] = "Nota: %s\n\nHaz clic para editar"
+    L["NOTE_TOOLTIP_EMPTY"] = "Sin nota — haz clic para añadir"
 
 -- =========================================================================
 -- Italian (itIT)
@@ -295,6 +309,8 @@ elseif locale == "itIT" then
     L["DIALOG_CREATE"] = "Crea"
     L["DIALOG_DELETE_LIST_TEXT"] = "Vuoi davvero eliminare l'elenco '%s'?"
     L["DIALOG_DELETE"] = "Elimina"
+    L["DIALOG_EDIT_NOTE_TEXT"] = "Nota per %s:"
+    L["DIALOG_SAVE"] = "Salva"
 
     L["TOOLTIP_LEFT_CLICK"] = "Clic sinistro: |cffffffffApri/chiudi finestra|r"
     L["TOOLTIP_RIGHT_CLICK"] = "Clic destro: |cffffffffPanoramica elenchi|r"
@@ -304,6 +320,10 @@ elseif locale == "itIT" then
     L["CONTEXT_REMOVE"] = "Rimuovi"
     L["CONTEXT_ADD"] = "Aggiungi"
     L["CONTEXT_LIST"] = "Elenco: %s"
+
+    L["NOTE_HEADER"] = "Nota"
+    L["NOTE_TOOLTIP"] = "Nota: %s\n\nClicca per modificare"
+    L["NOTE_TOOLTIP_EMPTY"] = "Nessuna nota — clicca per aggiungere"
 
 -- =========================================================================
 -- Portuguese (ptBR)
@@ -350,6 +370,8 @@ elseif locale == "ptBR" then
     L["DIALOG_CREATE"] = "Criar"
     L["DIALOG_DELETE_LIST_TEXT"] = "Tem certeza de que deseja excluir a lista '%s'?"
     L["DIALOG_DELETE"] = "Excluir"
+    L["DIALOG_EDIT_NOTE_TEXT"] = "Nota para %s:"
+    L["DIALOG_SAVE"] = "Salvar"
 
     L["TOOLTIP_LEFT_CLICK"] = "Clique esquerdo: |cffffffffAbrir/fechar janela|r"
     L["TOOLTIP_RIGHT_CLICK"] = "Clique direito: |cffffffffVisão geral das listas|r"
@@ -359,6 +381,10 @@ elseif locale == "ptBR" then
     L["CONTEXT_REMOVE"] = "Remover"
     L["CONTEXT_ADD"] = "Adicionar"
     L["CONTEXT_LIST"] = "Lista: %s"
+
+    L["NOTE_HEADER"] = "Nota"
+    L["NOTE_TOOLTIP"] = "Nota: %s\n\nClique para editar"
+    L["NOTE_TOOLTIP_EMPTY"] = "Sem nota — clique para adicionar"
 
 -- =========================================================================
 -- Russian (ruRU)
@@ -405,6 +431,8 @@ elseif locale == "ruRU" then
     L["DIALOG_CREATE"] = "Создать"
     L["DIALOG_DELETE_LIST_TEXT"] = "Вы действительно хотите удалить список '%s'?"
     L["DIALOG_DELETE"] = "Удалить"
+    L["DIALOG_EDIT_NOTE_TEXT"] = "Заметка для %s:"
+    L["DIALOG_SAVE"] = "Сохранить"
 
     L["TOOLTIP_LEFT_CLICK"] = "Левый клик: |cffffffffОткрыть/закрыть окно|r"
     L["TOOLTIP_RIGHT_CLICK"] = "Правый клик: |cffffffffОбзор списков|r"
@@ -414,6 +442,10 @@ elseif locale == "ruRU" then
     L["CONTEXT_REMOVE"] = "Удалить"
     L["CONTEXT_ADD"] = "Добавить"
     L["CONTEXT_LIST"] = "Список: %s"
+
+    L["NOTE_HEADER"] = "Заметка"
+    L["NOTE_TOOLTIP"] = "Заметка: %s\n\nНажмите для редактирования"
+    L["NOTE_TOOLTIP_EMPTY"] = "Нет заметки — нажмите для добавления"
 
 -- =========================================================================
 -- Simplified Chinese (zhCN)
@@ -460,6 +492,8 @@ elseif locale == "zhCN" then
     L["DIALOG_CREATE"] = "创建"
     L["DIALOG_DELETE_LIST_TEXT"] = "确定要删除列表 '%s' 吗？"
     L["DIALOG_DELETE"] = "删除"
+    L["DIALOG_EDIT_NOTE_TEXT"] = "%s 的备注:"
+    L["DIALOG_SAVE"] = "保存"
 
     L["TOOLTIP_LEFT_CLICK"] = "左键点击: |cffffffff打开/关闭窗口|r"
     L["TOOLTIP_RIGHT_CLICK"] = "右键点击: |cffffffff列表概览|r"
@@ -469,6 +503,10 @@ elseif locale == "zhCN" then
     L["CONTEXT_REMOVE"] = "移除"
     L["CONTEXT_ADD"] = "添加"
     L["CONTEXT_LIST"] = "列表: %s"
+
+    L["NOTE_HEADER"] = "备注"
+    L["NOTE_TOOLTIP"] = "备注: %s\n\n点击编辑"
+    L["NOTE_TOOLTIP_EMPTY"] = "无备注 — 点击添加"
 
 -- =========================================================================
 -- Traditional Chinese (zhTW)
@@ -515,6 +553,8 @@ elseif locale == "zhTW" then
     L["DIALOG_CREATE"] = "建立"
     L["DIALOG_DELETE_LIST_TEXT"] = "確定要刪除名單 '%s' 嗎？"
     L["DIALOG_DELETE"] = "刪除"
+    L["DIALOG_EDIT_NOTE_TEXT"] = "%s 的註記:"
+    L["DIALOG_SAVE"] = "儲存"
 
     L["TOOLTIP_LEFT_CLICK"] = "左鍵點擊: |cffffffff開啟/關閉視窗|r"
     L["TOOLTIP_RIGHT_CLICK"] = "右鍵點擊: |cffffffff名單概覽|r"
@@ -524,6 +564,10 @@ elseif locale == "zhTW" then
     L["CONTEXT_REMOVE"] = "移除"
     L["CONTEXT_ADD"] = "新增"
     L["CONTEXT_LIST"] = "名單: %s"
+
+    L["NOTE_HEADER"] = "註記"
+    L["NOTE_TOOLTIP"] = "註記: %s\n\n點擊編輯"
+    L["NOTE_TOOLTIP_EMPTY"] = "無註記 — 點擊新增"
 
 -- =========================================================================
 -- Korean (koKR)
@@ -570,6 +614,8 @@ elseif locale == "koKR" then
     L["DIALOG_CREATE"] = "만들기"
     L["DIALOG_DELETE_LIST_TEXT"] = "'%s' 목록을 정말 삭제하시겠습니까?"
     L["DIALOG_DELETE"] = "삭제"
+    L["DIALOG_EDIT_NOTE_TEXT"] = "%s 메모:"
+    L["DIALOG_SAVE"] = "저장"
 
     L["TOOLTIP_LEFT_CLICK"] = "좌클릭: |cffffffff창 열기/닫기|r"
     L["TOOLTIP_RIGHT_CLICK"] = "우클릭: |cffffffff목록 개요|r"
@@ -579,5 +625,8 @@ elseif locale == "koKR" then
     L["CONTEXT_REMOVE"] = "제거"
     L["CONTEXT_ADD"] = "추가"
     L["CONTEXT_LIST"] = "목록: %s"
-end
 
+    L["NOTE_HEADER"] = "메모"
+    L["NOTE_TOOLTIP"] = "메모: %s\n\n클릭하여 편집"
+    L["NOTE_TOOLTIP_EMPTY"] = "메모 없음 — 클릭하여 추가"
+end

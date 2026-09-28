@@ -234,38 +234,6 @@ StaticPopupDialogs["GROUPWATCH_NEW_LIST"] = {
     preferredIndex = 3,
 }
 
-StaticPopupDialogs["GROUPWATCH_EDIT_NOTE"] = {
-    text = L["DIALOG_EDIT_NOTE_TEXT"],
-    button1 = L["DIALOG_SAVE"],
-    button2 = L["DIALOG_CANCEL"],
-    hasEditBox = true,
-    OnShow = function(self)
-        self:SetSize(400, 180)
-        self.EditBox:ClearAllPoints()
-        self.EditBox:SetPoint("TOPLEFT", self, "TOPLEFT", 20, -45)
-        self.EditBox:SetPoint("BOTTOMRIGHT", self, "BOTTOMRIGHT", -20, 55)
-        self.EditBox:SetMultiLine(true)
-    end,
-    OnAccept = function(self)
-        local data = self.data
-        if data then
-            SavePlayerNote(data.listName, data.playerName, self.EditBox:GetText())
-        end
-    end,
-    EditBoxOnEnterPressed = function(self)
-        local parent = self:GetParent()
-        local data = parent.data
-        if data then
-            SavePlayerNote(data.listName, data.playerName, self:GetText())
-        end
-        parent:Hide()
-    end,
-    timeout = 0,
-    whileDead = true,
-    hideOnEscape = true,
-    preferredIndex = 3,
-}
-
 StaticPopupDialogs["GROUPWATCH_DELETE_LIST"] = {
     text = L["DIALOG_DELETE_LIST_TEXT"],
     button1 = L["DIALOG_DELETE"],
@@ -380,6 +348,143 @@ if EllesmereUI and EllesmereUI.RegisterSkin then
             GroupWatchUI:Refresh()
         end
     end)
+end
+
+----------------------------------------------------
+-- CUSTOM NOTE EDITOR FRAME
+----------------------------------------------------
+local NoteEditorFrame = nil
+
+local function ShowNoteEditor(playerName, listName, existingNote)
+    if not NoteEditorFrame then
+        local frame = CreateFrame("Frame", "GroupWatchNoteEditor", UIParent, "BackdropTemplate")
+        frame:SetSize(420, 320) -- Vergrößertes Fenster für bessere Ansicht
+        frame:SetPoint("CENTER")
+        frame:SetMovable(true)
+        frame:EnableMouse(true)
+        frame:RegisterForDrag("LeftButton")
+        frame:SetScript("OnDragStart", frame.StartMoving)
+        frame:SetScript("OnDragStop", frame.StopMovingOrSizing)
+        frame:SetClampedToScreen(true)
+        frame:SetFrameStrata("DIALOG")
+        frame:SetFrameLevel(100)
+
+        if not (skinEUI or IsElvUIPresent()) then
+            frame:SetBackdrop({
+                bgFile = "Interface\\DialogFrame\\UI-DialogBox-Background",
+                edgeFile = "Interface\\DialogFrame\\UI-DialogBox-Border",
+                tile = true, tileSize = 32, edgeSize = 32,
+                insets = { left = 8, right = 8, top = 8, bottom = 8 }
+            })
+        end
+
+        -- Title
+        local title = frame:CreateFontString(nil, "OVERLAY", "GameFontNormalLarge")
+        title:SetPoint("TOP", frame, "TOP", 0, -14)
+        title:SetText("")
+        frame.title = title
+
+        -- Close button
+        local closeBtn = CreateFrame("Button", nil, frame, "UIPanelCloseButton")
+        closeBtn:SetPoint("TOPRIGHT", frame, "TOPRIGHT", -5, -5)
+        closeBtn:SetScript("OnClick", function() frame:Hide() end)
+        frame.closeBtn = closeBtn
+
+        -- Scroll frame for multiline note input
+        local scrollFrame = CreateFrame("ScrollFrame", "GroupWatchNoteScrollFrame", frame, "UIPanelScrollFrameTemplate")
+        scrollFrame:SetPoint("TOPLEFT", frame, "TOPLEFT", 20, -45)
+        scrollFrame:SetPoint("BOTTOMRIGHT", frame, "BOTTOMRIGHT", -35, 50)
+
+        local editBox = CreateFrame("EditBox", "GroupWatchNoteEditBox", scrollFrame)
+        editBox:SetMultiLine(true)
+        editBox:SetAutoFocus(true)
+        editBox:SetFontObject(ChatFontNormal)
+        editBox:SetWidth(345)
+        editBox:SetScript("OnEscapePressed", function() frame:Hide() end)
+        
+        -- Enter erzeugt eine neue Zeile
+        editBox:SetScript("OnEnterPressed", function(self)
+            self:Insert("\n")
+        end)
+        
+        -- Dynamische Höhenanpassung für flüssiges Scrollen
+        editBox:SetScript("OnTextChanged", function(self)
+            local _, h = self:GetFont()
+            local text = self:GetText() or ""
+            local numLines = select(2, text:gsub("\n", "\n")) + 1
+            local lineHeight = h and (h + 2) or 14
+            local textHeight = math.max(numLines * lineHeight + 20, scrollFrame:GetHeight())
+            self:SetHeight(textHeight)
+        end)
+
+        scrollFrame:SetScrollChild(editBox)
+        frame.scrollFrame = scrollFrame
+        frame.editBox = editBox
+
+        -- Save button
+        local saveBtn = CreateFrame("Button", nil, frame, "UIPanelButtonTemplate")
+        saveBtn:SetSize(100, 24)
+        saveBtn:SetPoint("BOTTOMRIGHT", frame, "BOTTOM", -6, 16)
+        saveBtn:SetText(L["DIALOG_SAVE"])
+        saveBtn:SetScript("OnClick", function()
+            if frame.noteData then
+                SavePlayerNote(frame.noteData.listName, frame.noteData.playerName, frame.editBox:GetText())
+            end
+            frame:Hide()
+        end)
+        frame.saveBtn = saveBtn
+
+        -- Cancel button
+        local cancelBtn = CreateFrame("Button", nil, frame, "UIPanelButtonTemplate")
+        cancelBtn:SetSize(100, 24)
+        cancelBtn:SetPoint("BOTTOMLEFT", frame, "BOTTOM", 6, 16)
+        cancelBtn:SetText(L["DIALOG_CANCEL"])
+        cancelBtn:SetScript("OnClick", function() frame:Hide() end)
+        frame.cancelBtn = cancelBtn
+
+        -- Skin Elements
+        SkinCloseButton(closeBtn)
+        SkinButton(saveBtn)
+        SkinButton(cancelBtn)
+        if skinEUI and skinEUI.Shell then
+            if frame.ClearBackdrop then frame:ClearBackdrop() elseif frame.SetBackdrop then frame:SetBackdrop(nil) end
+            skinEUI.Shell(frame)
+            if skinEUI.Font then
+                skinEUI.Font(title)
+            end
+        elseif IsElvUIPresent() then
+            local S = GetElvUISkins()
+            if frame.ClearBackdrop then frame:ClearBackdrop() elseif frame.SetBackdrop then frame:SetBackdrop(nil) end
+            if S and S.HandleFrame then
+                S:HandleFrame(frame, true)
+            else
+                if frame.StripTextures then frame:StripTextures() end
+                if frame.SetTemplate then
+                    frame:SetTemplate("Transparent")
+                elseif frame.CreateBackdrop then
+                    frame:CreateBackdrop("Transparent")
+                end
+            end
+        end
+        if scrollFrame.ScrollBar then SkinScrollBar(scrollFrame.ScrollBar) end
+
+        tinsert(UISpecialFrames, "GroupWatchNoteEditor")
+        NoteEditorFrame = frame
+    end
+
+    local f = NoteEditorFrame
+    f.noteData = { listName = listName, playerName = playerName }
+    f.title:SetText(string.format(L["DIALOG_EDIT_NOTE_TEXT"], playerName))
+    f.editBox:SetText(existingNote or "")
+    f.editBox:SetCursorPosition(string.len(existingNote or ""))
+    
+    C_Timer.After(0, function()
+        if f.scrollFrame:GetWidth() > 0 then
+            f.editBox:SetWidth(f.scrollFrame:GetWidth() - 10)
+        end
+    end)
+    f:Show()
+    f.editBox:SetFocus()
 end
 
 ----------------------------------------------------
@@ -620,22 +725,16 @@ local function CreateUI()
                         noteBtn:SetPoint("RIGHT", del, "LEFT", -2, 0)
                         noteBtn:SetText("|cffd9b44aN|r")
                         noteBtn:SetScript("OnClick", function()
-                            local dialog = StaticPopup_Show("GROUPWATCH_EDIT_NOTE", pName)
-                            if dialog then
-                                dialog.data = {
-                                    listName = lName,
-                                    playerName = pName,
-                                }
-                                dialog.EditBox:SetText(noteText or "")
-                                dialog.EditBox:HighlightText()
-                            end
+                            ShowNoteEditor(pName, lName, noteText)
                         end)
                         noteBtn:SetScript("OnEnter", function(selfBtn)
                             GameTooltip:SetOwner(selfBtn, "ANCHOR_RIGHT")
                             if noteText and noteText ~= "" then
-                                GameTooltip:SetText(string.format(L["NOTE_TOOLTIP"], noteText), 1, 1, 1, true)
+                                GameTooltip:ClearLines()
+                                GameTooltip:AddLine(string.format(L["NOTE_TOOLTIP"], noteText), 1, 1, 1, true)
                             else
-                                GameTooltip:SetText(L["NOTE_TOOLTIP_EMPTY"], 1, 1, 1, true)
+                                GameTooltip:ClearLines()
+                                GameTooltip:AddLine(L["NOTE_TOOLTIP_EMPTY"], 1, 1, 1, true)
                             end
                             GameTooltip:Show()
                         end)
