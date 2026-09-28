@@ -67,10 +67,15 @@ end
 
 local function GetFullName(unitOrName)
     if not unitOrName or unitOrName == "" then return nil end
-    local name, realm = strsplit("-", unitOrName)
+    unitOrName = tostring(unitOrName):gsub("%*", "")
+    local name, realm = strsplit("-", unitOrName, 2)
     if not name or name == "" then return nil end
+    name = strtrim(name)
+    if name == "" then return nil end
     if not realm or realm == "" then
         realm = GetRealmName():gsub("%s+", "")
+    else
+        realm = strtrim(realm):gsub("%s+", "")
     end
     return name .. "-" .. realm
 end
@@ -922,24 +927,105 @@ end
 ----------------------------------------------------
 -- CONTEXT MENU (Right-click)
 ----------------------------------------------------
+local function GetPlayerFullNameFromUnit(unit)
+    if not unit then return nil end
+    local ok, isPlayer = pcall(UnitIsPlayer, unit)
+    if not ok or not isPlayer then
+        return nil
+    end
+
+    local okName, name, realm = pcall(UnitName, unit)
+    if not okName or not name or name == "" then return nil end
+    name = strtrim(name)
+    if name == "" then return nil end
+    if not realm or realm == "" then
+        realm = GetRealmName():gsub("%s+", "")
+    else
+        realm = strtrim(realm):gsub("%s+", "")
+    end
+    return name .. "-" .. realm
+end
+
+local function GetPlayerFullNameFromContext(contextData)
+    if not contextData then return nil end
+
+    -- 1. Unit token if present (party, raid, target, focus, player)
+    if contextData.unit then
+        local fullName = GetPlayerFullNameFromUnit(contextData.unit)
+        if fullName then
+            return fullName
+        end
+    end
+
+    -- 2. Direct name & server/realm fields (chat frames, friends list, guild/community rosters)
+    local name = contextData.name
+    local server = contextData.server or contextData.realm
+    if name and name ~= "" then
+        name = tostring(name):gsub("%*", "")
+        name = strtrim(name)
+        -- Ignore BattleTag names containing '#'
+        if not name:find("#") then
+            if server and server ~= "" and not name:find("-") then
+                server = strtrim(server):gsub("%s+", "")
+                return name .. "-" .. server
+            else
+                return GetFullName(name)
+            end
+        end
+    end
+
+    -- 3. Battle.net account info (for BNet friend or whisper context)
+    local bnetID = contextData.bnetAccountID
+    local accountInfo = contextData.accountInfo
+    if not accountInfo and bnetID and C_BattleNet and C_BattleNet.GetAccountInfoByID then
+        accountInfo = C_BattleNet.GetAccountInfoByID(bnetID)
+    end
+    if accountInfo and accountInfo.gameAccountInfo then
+        local gameInfo = accountInfo.gameAccountInfo
+        local charName = gameInfo.characterName
+        local realmName = gameInfo.realmName
+        if charName and charName ~= "" then
+            charName = strtrim(charName)
+            if not realmName or realmName == "" then
+                realmName = GetRealmName():gsub("%s+", "")
+            else
+                realmName = strtrim(realmName):gsub("%s+", "")
+            end
+            return charName .. "-" .. realmName
+        end
+    end
+
+    -- 4. Community / Club member info if present
+    if contextData.memberInfo and contextData.memberInfo.name then
+        return GetFullName(contextData.memberInfo.name)
+    end
+
+    return nil
+end
+
 if Menu and Menu.ModifyMenu then
     local function GroupWatchMenuHandler(ownerRegion, rootDescription, contextData)
-        if not contextData or not contextData.unit then return end
-        local unit = contextData.unit
+        local fullName = GetPlayerFullNameFromContext(contextData)
+        if not fullName then return end
 
-        local name, realm = UnitName(unit)
-        if not name or name == "" then return end
-
-        if not realm or realm == "" then
-            realm = GetRealmName():gsub("%s+", "")
-        end
-        local fullName = name .. "-" .. realm
+        InitDB()
+        if not GroupWatchDB or not GroupWatchDB.lists then return end
 
         rootDescription:CreateDivider()
         local mainSubMenu = rootDescription:CreateButton("GroupWatch")
 
-        InitDB()
-        for lName, lData in pairs(GroupWatchDB.lists) do
+        local sortedLists = {}
+        for lName in pairs(GroupWatchDB.lists) do
+            table.insert(sortedLists, lName)
+        end
+        table.sort(sortedLists, function(a, b)
+            if IsDefaultList(a) and not IsDefaultList(b) then return true end
+            if not IsDefaultList(a) and IsDefaultList(b) then return false end
+            return a < b
+        end)
+
+        for _, lName in ipairs(sortedLists) do
+            local lData = GroupWatchDB.lists[lName]
             local listSubMenu = mainSubMenu:CreateButton(string.format(L["CONTEXT_LIST"], lName))
             if lData.players and lData.players[fullName] then
                 listSubMenu:CreateButton(L["CONTEXT_REMOVE"], function()
@@ -953,9 +1039,130 @@ if Menu and Menu.ModifyMenu then
         end
     end
 
-    Menu.ModifyMenu("MENU_UNIT_PLAYER", GroupWatchMenuHandler)
-    Menu.ModifyMenu("MENU_UNIT_PARTY",  GroupWatchMenuHandler)
-    Menu.ModifyMenu("MENU_UNIT_RAID_PLAYER", GroupWatchMenuHandler)
+    local CONTEXT_MENU_TAGS = {
+        "MENU_UNIT_PLAYER",
+        "MENU_UNIT_PARTY",
+        "MENU_UNIT_RAID_PLAYER",
+        "MENU_UNIT_RAID",
+        "MENU_UNIT_FRIEND",
+        "MENU_UNIT_CHAT_ROSTER",
+        "MENU_UNIT_COMMUNITY_MEMBER",
+        "MENU_UNIT_COMMUNITIES_GUILD_MEMBER",
+        "MENU_UNIT_COMMUNITIES_MEMBER",
+        "MENU_UNIT_BN_FRIEND",
+        "MENU_UNIT_TARGET",
+        "MENU_UNIT_FOCUS",
+        "MENU_UNIT_SELF",
+        "MENU_UNIT_ENEMY_PLAYER",
+        "MENU_UNIT_GUILD",
+        "MENU_UNIT_GUILD_OFFLINE",
+    }
+
+    for _, tag in ipairs(CONTEXT_MENU_TAGS) do
+        Menu.ModifyMenu(tag, GroupWatchMenuHandler)
+    end
+end
+
+----------------------------------------------------
+-- TOOLTIP (Hovering over player or playerframe)
+----------------------------------------------------
+local function GetPlayerFullNameFromTooltip(tooltip, data)
+    local unit, name
+
+    if TooltipUtil and TooltipUtil.GetDisplayedUnit then
+        local ok, resUnit = pcall(TooltipUtil.GetDisplayedUnit, tooltip)
+        if ok and resUnit and type(resUnit) == "string" then
+            unit = resUnit
+        end
+    end
+
+    if not unit and tooltip and tooltip.GetUnit then
+        local ok, resName, resUnit = pcall(tooltip.GetUnit, tooltip)
+        if ok then
+            if resUnit and type(resUnit) == "string" then
+                unit = resUnit
+            end
+            if resName and type(resName) == "string" then
+                name = resName
+            end
+        end
+    end
+
+    if unit and UnitExists and UnitExists(unit) then
+        return GetPlayerFullNameFromUnit(unit)
+    end
+
+    -- Fallback 1: via GUID if data is provided and is a player
+    if data and data.guid and type(data.guid) == "string" and data.guid:find("^Player%-") and GetPlayerInfoByGUID then
+        local ok, _, _, _, _, _, pName, pRealm = pcall(GetPlayerInfoByGUID, data.guid)
+        if ok and pName and pName ~= "" then
+            if not pRealm or pRealm == "" then
+                pRealm = GetRealmName():gsub("%s+", "")
+            else
+                pRealm = strtrim(pRealm):gsub("%s+", "")
+            end
+            return pName .. "-" .. pRealm
+        end
+    end
+
+    -- Fallback 2: via name if available
+    if name and name ~= "" and not name:find("#") then
+        return GetFullName(name)
+    end
+
+    return nil
+end
+
+local function OnTooltipSetUnit(tooltip, data)
+    if not tooltip or not tooltip.AddLine then return end
+    if not GroupWatchDB or not GroupWatchDB.lists then return end
+
+    local fullName = GetPlayerFullNameFromTooltip(tooltip, data)
+    if not fullName then return end
+
+    local name = strsplit("-", fullName, 2)
+
+    local entries = {}
+    for lName, lData in pairs(GroupWatchDB.lists) do
+        local inList = lData.players and (lData.players[fullName] or (name and lData.players[name]))
+        if inList then
+            local note = lData.notes and (lData.notes[fullName] or (name and lData.notes[name]))
+            table.insert(entries, {
+                list = lName,
+                note = (note and note ~= "") and note or nil,
+            })
+        end
+    end
+
+    if #entries == 0 then return end
+
+    table.sort(entries, function(a, b)
+        if IsDefaultList(a.list) and not IsDefaultList(b.list) then return true end
+        if not IsDefaultList(a.list) and IsDefaultList(b.list) then return false end
+        return a.list < b.list
+    end)
+
+    local noteHeader = L["NOTE_HEADER"] or "Note"
+
+    for _, entry in ipairs(entries) do
+        if entry.note then
+            if IsDefaultList(entry.list) then
+                tooltip:AddLine(string.format("|cff00ccffGroupWatch %s:|r |cffffffff%s|r", noteHeader, entry.note), 1, 1, 1, true)
+            else
+                tooltip:AddLine(string.format("|cff00ccffGroupWatch|r (|cffffd100%s|r) - |cff00ccff%s:|r |cffffffff%s|r", entry.list, noteHeader, entry.note), 1, 1, 1, true)
+            end
+        else
+            tooltip:AddLine(string.format("|cff00ccffGroupWatch:|r |cffffd100%s|r", entry.list), 1, 1, 1, true)
+        end
+    end
+end
+
+if TooltipDataProcessor and TooltipDataProcessor.AddTooltipPostCall and Enum and Enum.TooltipDataType and Enum.TooltipDataType.Unit then
+    TooltipDataProcessor.AddTooltipPostCall(Enum.TooltipDataType.Unit, OnTooltipSetUnit)
+elseif GameTooltip and GameTooltip.HookScript then
+    GameTooltip:HookScript("OnTooltipSetUnit", function(self)
+        OnTooltipSetUnit(self)
+    end)
 end
 
 if IsLoggedIn and IsLoggedIn() then
