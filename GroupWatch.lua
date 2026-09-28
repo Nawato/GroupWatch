@@ -184,6 +184,84 @@ local function CreateList(listName)
 	end
 end
 
+local function RenameList(oldName, newName)
+	if not oldName or not newName or oldName == "" or newName == "" then
+		return
+	end
+	if oldName == newName then
+		return
+	end
+
+	InitDB()
+	if not GroupWatchDB.lists[oldName] then
+		print("|cffffaa00[GroupWatch]|r " .. string.format(L["MSG_LIST_NOT_FOUND"], oldName))
+		return
+	end
+
+	if GroupWatchDB.lists[newName] then
+		print("|cffffaa00[GroupWatch]|r " .. string.format(L["MSG_LIST_EXISTS"], newName))
+		return
+	end
+
+	-- Migrate list structure, preserving players and note history
+	GroupWatchDB.lists[newName] = GroupWatchDB.lists[oldName]
+	GroupWatchDB.lists[oldName] = nil
+
+	if selectedList == oldName then
+		selectedList = newName
+	end
+
+	if GroupWatchUI and GroupWatchUI:IsShown() then
+		GroupWatchUI:Refresh()
+	end
+end
+
+local function MovePlayer(pName, sourceList, targetList)
+	InitDB()
+	if not GroupWatchDB.lists[sourceList] or not GroupWatchDB.lists[targetList] then
+		return
+	end
+
+	local note = GroupWatchDB.lists[sourceList].notes and GroupWatchDB.lists[sourceList].notes[pName]
+
+	-- Remove from source
+	GroupWatchDB.lists[sourceList].players[pName] = nil
+	if GroupWatchDB.lists[sourceList].notes then
+		GroupWatchDB.lists[sourceList].notes[pName] = nil
+	end
+
+	-- Add to target
+	GroupWatchDB.lists[targetList].players[pName] = true
+	if note then
+		GroupWatchDB.lists[targetList].notes = GroupWatchDB.lists[targetList].notes or {}
+		GroupWatchDB.lists[targetList].notes[pName] = note
+	end
+
+	if GroupWatchUI and GroupWatchUI:IsShown() then
+		GroupWatchUI:Refresh()
+	end
+end
+
+local function CopyPlayer(pName, sourceList, targetList)
+	InitDB()
+	if not GroupWatchDB.lists[sourceList] or not GroupWatchDB.lists[targetList] then
+		return
+	end
+
+	local note = GroupWatchDB.lists[sourceList].notes and GroupWatchDB.lists[sourceList].notes[pName]
+
+	-- Add to target
+	GroupWatchDB.lists[targetList].players[pName] = true
+	if note then
+		GroupWatchDB.lists[targetList].notes = GroupWatchDB.lists[targetList].notes or {}
+		GroupWatchDB.lists[targetList].notes[pName] = note
+	end
+
+	if GroupWatchUI and GroupWatchUI:IsShown() then
+		GroupWatchUI:Refresh()
+	end
+end
+
 local function SavePlayerNote(listName, playerName, note)
 	InitDB()
 	local listData = GroupWatchDB.lists[listName]
@@ -271,6 +349,38 @@ StaticPopupDialogs["GROUPWATCH_NEW_LIST"] = {
 			CreateList(text)
 		end
 		self:GetParent():Hide()
+	end,
+	timeout = 0,
+	whileDead = true,
+	hideOnEscape = true,
+	preferredIndex = 3,
+}
+
+StaticPopupDialogs["GROUPWATCH_RENAME_LIST"] = {
+	text = L["DIALOG_RENAME_LIST_TEXT"] or "Rename List:",
+	button1 = L["DIALOG_SAVE"] or "Save",
+	button2 = L["DIALOG_CANCEL"],
+	hasEditBox = true,
+	OnShow = function(self, data)
+		if data then
+			self.EditBox:SetText(data)
+			self.EditBox:HighlightText()
+		end
+	end,
+	OnAccept = function(self, data)
+		local newName = self.EditBox:GetText()
+		if newName and newName ~= "" and data then
+			RenameList(data, newName)
+		end
+	end,
+	EditBoxOnEnterPressed = function(self, data)
+		local newName = self:GetText()
+		local parent = self:GetParent()
+		local oldName = parent.data or data
+		if newName and newName ~= "" and oldName then
+			RenameList(oldName, newName)
+		end
+		parent:Hide()
 	end,
 	timeout = 0,
 	whileDead = true,
@@ -420,7 +530,7 @@ local NoteEditorFrame = nil
 local function ShowNoteEditor(playerName, listName, existingNote)
 	if not NoteEditorFrame then
 		local frame = CreateFrame("Frame", "GroupWatchNoteEditor", UIParent, "BackdropTemplate")
-		frame:SetSize(420, 320) -- Vergrößertes Fenster für bessere Ansicht
+		frame:SetSize(420, 320)
 		frame:SetPoint("CENTER")
 		frame:SetMovable(true)
 		frame:EnableMouse(true)
@@ -470,12 +580,10 @@ local function ShowNoteEditor(playerName, listName, existingNote)
 			frame:Hide()
 		end)
 
-		-- Enter erzeugt eine neue Zeile
 		editBox:SetScript("OnEnterPressed", function(self)
 			self:Insert("\n")
 		end)
 
-		-- Dynamische Höhenanpassung für flüssiges Scrollen
 		editBox:SetScript("OnTextChanged", function(self)
 			local _, h = self:GetFont()
 			local text = self:GetText() or ""
@@ -588,7 +696,6 @@ local function CreateUI()
 	f:SetScript("OnDragStop", f.StopMovingOrSizing)
 	f:SetClampedToScreen(true)
 
-	-- Only set default background & border if EllesmereUI or ElvUI is not active
 	if not (skinEUI or IsElvUIPresent()) then
 		f:SetBackdrop({
 			bgFile = "Interface\\DialogFrame\\UI-DialogBox-Background",
@@ -611,7 +718,7 @@ local function CreateUI()
 	closeBtn:SetPoint("TOPRIGHT", f, "TOPRIGHT", -5, -5)
 	f.closeBtn = closeBtn
 
-	-- ScrollFrame for list area (no template = no visible scrollbar; mousewheel below)
+	-- ScrollFrame for list area
 	local scrollFrame = CreateFrame("ScrollFrame", "GroupWatchScrollFrame", f)
 	scrollFrame:SetPoint("TOPLEFT", f, "TOPLEFT", 15, -40)
 	scrollFrame:SetPoint("BOTTOMRIGHT", f, "BOTTOMRIGHT", -15, 65)
@@ -664,7 +771,7 @@ local function CreateUI()
 		StaticPopup_Show("GROUPWATCH_NEW_LIST")
 	end)
 
-	-- Apply skin to window & base elements (if EUI / ElvUI active)
+	-- Apply skin to window & base elements
 	SkinWindow(f)
 
 	----------------------------------------------------
@@ -691,13 +798,54 @@ local function CreateUI()
 				lData.collapsed = false
 			end
 
-			-- Header container (Button so clicking the name/gap selects the list)
+			-- Header container
 			local headerRow = CreateFrame("Button", nil, self.content)
 			headerRow:SetSize(340, 22)
 			headerRow:SetPoint("TOPLEFT", self.content, "TOPLEFT", 0, yOffset)
-			headerRow:SetScript("OnClick", function()
+			headerRow:RegisterForClicks("LeftButtonUp", "RightButtonUp")
+			headerRow:SetScript("OnClick", function(selfBtn, button)
 				selectedList = lName
-				f:Refresh()
+				if button == "RightButton" then
+					if MenuUtil and MenuUtil.CreateContextMenu then
+						MenuUtil.CreateContextMenu(selfBtn, function(ownerRegion, rootDescription)
+							rootDescription:CreateTitle(lName)
+
+							-- Rename Option
+							rootDescription:CreateButton(L["RENAME_LIST"] or "Rename List", function()
+								local dialog = StaticPopup_Show("GROUPWATCH_RENAME_LIST", lName)
+								if dialog then
+									dialog.data = lName
+								end
+							end)
+
+							-- Delete Option
+							local delBtn = rootDescription:CreateButton(L["DELETE_LIST"] or "Delete List", function()
+								local dialog = StaticPopup_Show("GROUPWATCH_DELETE_LIST", lName)
+								if dialog then
+									dialog.data = lName
+								end
+							end)
+							if IsDefaultList(lName) then
+								delBtn:SetEnabled(false)
+							end
+
+							-- Change Sound Alert Submenu
+							local soundSubMenu =
+								rootDescription:CreateButton(L["CHANGE_SOUND_ALERT"] or "Change Sound Alert")
+							for _, soundOpt in ipairs(SOUND_OPTIONS) do
+								soundSubMenu:CreateButton(soundOpt.name, function()
+									lData.sound = soundOpt.id
+									if soundOpt.id > 0 then
+										PlaySound(soundOpt.id, "Master")
+									end
+									f:Refresh()
+								end)
+							end
+						end)
+					end
+				else
+					f:Refresh()
+				end
 			end)
 			table.insert(self.widgets, headerRow)
 
@@ -773,9 +921,12 @@ local function CreateUI()
 					for pName in pairs(lData.players) do
 						count = count + 1
 
+						local noteText = lData.notes and lData.notes[pName]
+
 						local row = CreateFrame("Button", nil, self.content)
 						row:SetSize(270, 20)
 						row:SetPoint("TOPLEFT", self.content, "TOPLEFT", 20, yOffset)
+						row:RegisterForClicks("LeftButtonUp", "RightButtonUp")
 
 						local lineText = row:CreateFontString(nil, "OVERLAY", "GameFontHighlight")
 						lineText:SetPoint("LEFT", row, "LEFT", 0, 0)
@@ -789,10 +940,54 @@ local function CreateUI()
 							lineText:SetText("• " .. pName)
 						end
 
-						row:SetScript("OnClick", function()
+						row:SetScript("OnClick", function(selfBtn, button)
 							selectedPlayer = pName
 							selectedList = lName
-							f:Refresh()
+
+							if button == "RightButton" then
+								if MenuUtil and MenuUtil.CreateContextMenu then
+									MenuUtil.CreateContextMenu(selfBtn, function(ownerRegion, rootDescription)
+										rootDescription:CreateTitle(pName)
+
+										-- Edit Note
+										rootDescription:CreateButton(L["EDIT_NOTE"] or "Edit Note", function()
+											ShowNoteEditor(pName, lName, noteText)
+										end)
+
+										-- Remove Player
+										rootDescription:CreateButton(L["CONTEXT_REMOVE"] or "Remove Player", function()
+											RemovePlayer(pName, lName)
+										end)
+
+										-- Move To List Submenu
+										local moveSubMenu =
+											rootDescription:CreateButton(L["MOVE_TO_LIST"] or "Move to List")
+										-- Copy To List Submenu
+										local copySubMenu =
+											rootDescription:CreateButton(L["COPY_TO_LIST"] or "Copy to List")
+
+										for targetListName in pairs(GroupWatchDB.lists) do
+											if targetListName ~= lName then
+												moveSubMenu:CreateButton(targetListName, function()
+													MovePlayer(pName, lName, targetListName)
+												end)
+											end
+											if
+												not (
+													GroupWatchDB.lists[targetListName].players
+													and GroupWatchDB.lists[targetListName].players[pName]
+												)
+											then
+												copySubMenu:CreateButton(targetListName, function()
+													CopyPlayer(pName, lName, targetListName)
+												end)
+											end
+										end
+									end)
+								end
+							else
+								f:Refresh()
+							end
 						end)
 						table.insert(self.widgets, row)
 
@@ -809,7 +1004,6 @@ local function CreateUI()
 						SkinButton(del)
 						table.insert(self.widgets, del)
 
-						local noteText = lData.notes and lData.notes[pName]
 						local noteBtn = CreateFrame("Button", nil, self.content, "UIPanelButtonTemplate")
 						noteBtn:SetSize(22, 20)
 						noteBtn:SetPoint("RIGHT", del, "LEFT", -2, 0)
@@ -1164,7 +1358,6 @@ local function GetPlayerFullNameFromContext(contextData)
 		return nil
 	end
 
-	-- 1. Unit token if present (party, raid, target, focus, player)
 	if contextData.unit then
 		local fullName = GetPlayerFullNameFromUnit(contextData.unit)
 		if fullName then
@@ -1172,13 +1365,11 @@ local function GetPlayerFullNameFromContext(contextData)
 		end
 	end
 
-	-- 2. Direct name & server/realm fields (chat frames, friends list, guild/community rosters)
 	local name = contextData.name
 	local server = contextData.server or contextData.realm
 	if name and name ~= "" then
 		name = tostring(name):gsub("%*", "")
 		name = strtrim(name)
-		-- Ignore BattleTag names containing '#'
 		if not name:find("#") then
 			if server and server ~= "" and not name:find("-") then
 				server = strtrim(server):gsub("%s+", "")
@@ -1189,7 +1380,6 @@ local function GetPlayerFullNameFromContext(contextData)
 		end
 	end
 
-	-- 3. Battle.net account info (for BNet friend or whisper context)
 	local bnetID = contextData.bnetAccountID
 	local accountInfo = contextData.accountInfo
 	if not accountInfo and bnetID and C_BattleNet and C_BattleNet.GetAccountInfoByID then
@@ -1210,7 +1400,6 @@ local function GetPlayerFullNameFromContext(contextData)
 		end
 	end
 
-	-- 4. Community / Club member info if present
 	if contextData.memberInfo and contextData.memberInfo.name then
 		return GetFullName(contextData.memberInfo.name)
 	end
@@ -1292,7 +1481,6 @@ end
 local function GetPlayerFullNameFromTooltip(tooltip, data)
 	local unit, name
 
-	-- 1. Unit aus Tooltip auslesen (abgesichert)
 	if TooltipUtil and TooltipUtil.GetDisplayedUnit then
 		local ok, resUnit = pcall(TooltipUtil.GetDisplayedUnit, tooltip)
 		if ok and resUnit and type(resUnit) == "string" then
@@ -1312,7 +1500,6 @@ local function GetPlayerFullNameFromTooltip(tooltip, data)
 		end
 	end
 
-	-- Abgesicherte Prüfung auf UnitExists (verhindert Secret-Value Taint)
 	if unit then
 		local ok, exists = pcall(UnitExists, unit)
 		if ok and exists then
@@ -1323,7 +1510,6 @@ local function GetPlayerFullNameFromTooltip(tooltip, data)
 		end
 	end
 
-	-- Fallback 1: via GUID (abgesichert gegen <secret string>)
 	if data and data.guid then
 		local ok, isPlayerGUID = pcall(function()
 			return type(data.guid) == "string" and data.guid:find("^Player%-")
@@ -1342,7 +1528,6 @@ local function GetPlayerFullNameFromTooltip(tooltip, data)
 		end
 	end
 
-	-- Fallback 2: Direkter Namensvergleich (abgesichert)
 	if name and type(name) == "string" and name ~= "" then
 		local ok, hasHash = pcall(function()
 			return name:find("#")
@@ -1393,7 +1578,7 @@ local function AppendNotesToTooltip(tooltip, fullName)
 
 	local noteHeader = L["NOTE_HEADER"] or "Note"
 
-	tooltip:AddLine(" ") -- Leerzeile zur optischen Trennung
+	tooltip:AddLine(" ")
 	for _, entry in ipairs(entries) do
 		if entry.note then
 			if IsDefaultList(entry.list) then
@@ -1432,13 +1617,11 @@ local function OnTooltipSetUnit(tooltip, data)
 	end
 end
 
--- Tooltip-Hooks für Einheiten
 if TooltipDataProcessor and TooltipDataProcessor.AddTooltipPostCall and Enum and Enum.TooltipDataType then
 	if Enum.TooltipDataType.Unit then
 		TooltipDataProcessor.AddTooltipPostCall(Enum.TooltipDataType.Unit, OnTooltipSetUnit)
 	end
 
-	-- Hook für Group Finder Suchergebnisse
 	if Enum.TooltipDataType.GroupFinderSearchResult then
 		TooltipDataProcessor.AddTooltipPostCall(Enum.TooltipDataType.GroupFinderSearchResult, function(tooltip, data)
 			if not data or not data.id then
@@ -1459,7 +1642,6 @@ elseif GameTooltip and GameTooltip.HookScript then
 	end)
 end
 
--- Hook für LFG / GroupFinder Tooltips
 if LFGListUtil_SetSearchEntryTooltip then
 	hooksecurefunc("LFGListUtil_SetSearchEntryTooltip", function(tooltip, resultID)
 		if not resultID then
