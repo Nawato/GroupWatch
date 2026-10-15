@@ -1,4 +1,4 @@
-## Interface: 120100
+## Interface: 120105
 ## Title: GroupWatch
 ## Notes: Monitors players in groups based on customizable lists, sounds, and notifications.
 ## Notes-deDE: Überwacht Spieler in Gruppen basierend auf anpassbaren Listen, Sounds und Nachrichten.
