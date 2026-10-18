@@ -279,6 +279,8 @@ local function MovePlayer(pName, sourceList, targetList)
 		return
 	end
 
+	GroupWatchDB.lists[sourceList].players = GroupWatchDB.lists[sourceList].players or {}
+	GroupWatchDB.lists[targetList].players = GroupWatchDB.lists[targetList].players or {}
 	local note = GroupWatchDB.lists[sourceList].notes and GroupWatchDB.lists[sourceList].notes[pName]
 
 	-- Remove from source
@@ -316,6 +318,37 @@ local function CopyPlayer(pName, sourceList, targetList)
 
 	if GroupWatchUI and GroupWatchUI:IsShown() then
 		GroupWatchUI:Refresh()
+	end
+end
+-- ---------------------------------------------------------------------------
+-- Drag-and-drop state for reorganizing players between lists
+-- ---------------------------------------------------------------------------
+local dragSourcePlayer = nil
+local dragSourceList = nil
+local dragSourceRow = nil
+
+local function TryMoveDraggedPlayer(targetList)
+	if not dragSourcePlayer or not dragSourceList or not targetList then
+		return false
+	end
+	if dragSourceList == targetList then
+		return false -- same list: cancel cleanly
+	end
+	if not GroupWatchDB.lists[targetList] then
+		return false
+	end
+	if GroupWatchDB.lists[targetList].players
+		and GroupWatchDB.lists[targetList].players[dragSourcePlayer] then
+		return false -- already a member of the target list
+	end
+	MovePlayer(dragSourcePlayer, dragSourceList, targetList)
+	return true
+end
+
+local function ClearDragVisuals()
+	if dragSourceRow then
+		dragSourceRow:SetAlpha(1.0)
+		dragSourceRow = nil
 	end
 end
 
@@ -970,6 +1003,13 @@ local function CreateUI()
 						f:Refresh()
 					end
 				end)
+				btn:SetScript("OnReceiveDrag", function(selfBtn)
+					local targetList = selfBtn.data.listName
+					if TryMoveDraggedPlayer(targetList) then
+						-- moved successfully; Refresh handled by MovePlayer
+					end
+					ClearDragVisuals()
+				end)
 				return btn
 			end)
 			headerRow:SetPoint("TOPLEFT", content, "TOPLEFT", 0, yOffset)
@@ -995,26 +1035,31 @@ local function CreateUI()
 			collapseBtn:SetPoint("LEFT", headerRow, "LEFT", 0, 0)
 			collapseBtn:Show()
 
-			local collapseText = collapseBtn:CreateFontString(nil, "OVERLAY", "GameFontNormal")
-			collapseText:SetPoint("CENTER", collapseBtn, "CENTER", 0, 0)
-			collapseText:SetText(lData.collapsed and "|cffffd100[+]|r" or "|cffffd100[−]|r")
-			-- Store reference so we can update text each refresh without recreating
-			collapseBtn.collapseText = collapseText
+				local collapseText = collapseBtn.collapseText
+				if not collapseText then
+					collapseText = collapseBtn:CreateFontString(nil, "OVERLAY", "GameFontNormal")
+					collapseText:SetPoint("CENTER", collapseBtn, "CENTER", 0, 0)
+					collapseBtn.collapseText = collapseText
+				end
+				collapseText:SetText(lData.collapsed and "|cffffd100[+]|r" or "|cffffd100[−]|r")
 
 			SkinButton(collapseBtn)
 
 			-- List title — white when selected, dim gold otherwise
-			local headerText = headerRow:CreateFontString(nil, "OVERLAY", "GameFontNormalLarge")
-			headerText:SetPoint("LEFT", collapseBtn, "RIGHT", 6, 0)
-			if selectedList == lName then
-				headerText:SetText("|cffffffff" .. lName .. "|r")
-			else
-				headerText:SetText("|cffaaaaaa" .. lName .. "|r")
-			end
-			if skinEUI and skinEUI.Font then
-				skinEUI.Font(headerText)
-			end
-			headerRow.headerText = headerText
+				local headerText = headerRow.headerText
+				if not headerText then
+					headerText = headerRow:CreateFontString(nil, "OVERLAY", "GameFontNormalLarge")
+					headerText:SetPoint("LEFT", collapseBtn, "RIGHT", 6, 0)
+					headerRow.headerText = headerText
+				end
+				if selectedList == lName then
+					headerText:SetText("|cffffffff" .. lName .. "|r")
+				else
+					headerText:SetText("|cffaaaaaa" .. lName .. "|r")
+				end
+				if skinEUI and skinEUI.Font then
+					skinEUI.Font(headerText)
+				end
 
 			-- Sound dropdown button after title
 			local soundBtn = GetWidget("soundBtn", function()
@@ -1092,7 +1137,12 @@ local function CreateUI()
 							local btn = CreateFrame("Button", nil, content)
 							btn:SetSize(270, 20)
 							btn:RegisterForClicks("LeftButtonUp", "RightButtonUp")
+							btn:RegisterForDrag("LeftButton")
 							btn:SetScript("OnClick", function(selfBtn, button)
+							if dragSourceRow == selfBtn then
+								-- drag cancelled on this row; do not select it
+								return
+							end
 								local pName = btn.data.playerName
 								local lName = btn.data.listName
 								selectedPlayer = pName
@@ -1146,24 +1196,42 @@ local function CreateUI()
 									f:Refresh()
 								end
 							end)
+							btn:SetScript("OnDragStart", function(selfBtn)
+								dragSourcePlayer = selfBtn.data.playerName
+								dragSourceList = selfBtn.data.listName
+								dragSourceRow = selfBtn
+								selfBtn:SetAlpha(0.5)
+							end)
+							btn:SetScript("OnDragStop", function(selfBtn)
+								ClearDragVisuals()
+							end)
+							btn:SetScript("OnReceiveDrag", function(selfBtn)
+								local targetList = selfBtn.data.listName
+								if TryMoveDraggedPlayer(targetList) then
+									-- moved successfully; Refresh handled by MovePlayer
+								end
+								ClearDragVisuals()
+							end)
 							return btn
 						end)
 						row.data = { playerName = pName, listName = lName }
 						row:SetPoint("TOPLEFT", content, "TOPLEFT", 20, yOffset)
 						row:Show()
 
-						local lineText = row:CreateFontString(nil, "OVERLAY", "GameFontHighlight")
-						lineText:SetPoint("LEFT", row, "LEFT", 0, 0)
-						if skinEUI and skinEUI.Font then
-							skinEUI.Font(lineText)
+						local lineText = row.lineText
+						if not lineText then
+							lineText = row:CreateFontString(nil, "OVERLAY", "GameFontHighlight")
+							lineText:SetPoint("LEFT", row, "LEFT", 0, 0)
+							if skinEUI and skinEUI.Font then
+								skinEUI.Font(lineText)
+							end
 						end
-
+						row.lineText = lineText
 						if selectedPlayer == pName then
 							lineText:SetText("|cff00ff00• " .. pName .. "|r")
 						else
 							lineText:SetText("• " .. pName)
 						end
-						row.lineText = lineText
 
 						-- (−) Remove player button per row
 						local del = GetWidget("delBtn", function()
@@ -1223,14 +1291,22 @@ local function CreateUI()
 				end
 
 				if count == 0 then
-					local empty = content:CreateFontString(nil, "OVERLAY", "GameFontDisable")
+					local empty = content.emptyText
+					if not empty then
+						empty = content:CreateFontString(nil, "OVERLAY", "GameFontDisable")
+						if skinEUI and skinEUI.Font then
+							skinEUI.Font(empty)
+						end
+					end
+					content.emptyText = empty
 					empty:SetPoint("TOPLEFT", content, "TOPLEFT", 20, yOffset)
 					empty:SetText(L_NO_PLAYERS_IN_LIST)
-					if skinEUI and skinEUI.Font then
-						skinEUI.Font(empty)
-					end
 					empty:Show()
 					yOffset = yOffset - 22
+				else
+					if content.emptyText then
+						content.emptyText:Hide()
+					end
 				end
 			end
 
