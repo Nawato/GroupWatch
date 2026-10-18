@@ -1328,7 +1328,7 @@ local function CreateMinimapButton()
 	icon:SetSize(20, 20)
 	icon:SetPoint("CENTER", 0, 0)
 	-- Set custom addon icon path
-	icon:SetTexture("Interface\\AddOns\\GroupWatch\\icon_gw_wei.png")
+	icon:SetTexture("Interface\\AddOns\\GroupWatch\\Media\\icon_gw_wei.png")
 	icon:SetTexCoord(0, 1, 0, 1)
 
 	local overlay = btn:CreateTexture(nil, "OVERLAY")
@@ -1413,7 +1413,7 @@ local function RegisterLDB()
 		ldb:NewDataObject("GroupWatch", {
 			type = "launcher",
 			text = "GroupWatch",
-			icon = "Interface\\AddOns\\GroupWatch\\icon_gw_wei.png",
+			icon = "Interface\\AddOns\\GroupWatch\\Media\\icon_gw_wei.png",
 			OnClick = function(_, mouseBtn)
 				if mouseBtn == "LeftButton" then
 					ToggleUI()
