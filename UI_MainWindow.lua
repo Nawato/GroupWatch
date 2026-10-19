@@ -198,9 +198,9 @@ local function CreateUI()
 		})
 	end
 
-	-- Title bar
+	-- Title bar (placed on the header strip by ns.SkinWindow)
 	local title = f:CreateFontString(nil, "OVERLAY", "GameFontHighlight")
-	title:SetPoint("TOP", f, "TOP", 0, -12)
+	title:SetPoint("CENTER", f, "TOP", 0, -12)
 	title:SetText("|cff00ccffGroupWatch|r - " .. L["SUBTITLE"])
 	f.title = title
 

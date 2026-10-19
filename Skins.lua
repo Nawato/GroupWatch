@@ -71,6 +71,25 @@ function ns.SkinScrollBar(sb)
 	end
 end
 
+-- Height of the dark header strip the skin paints along the top of a window
+-- (the strip spans the full frame width, so its centre is the frame's top
+-- centre pushed down by half its height).
+local HEADER_HEIGHT = 25
+
+-- Center a window title inside the header strip.
+--
+-- The title is a plain FontString, so the skin does not place it for us: it
+-- stays where the addon anchored it (the top edge of the frame) and therefore
+-- hangs off the black bar instead of sitting in the middle of it.
+function ns.SkinTitle(frame, title)
+	if not title or not frame then
+		return
+	end
+
+	title:ClearAllPoints()
+	title:SetPoint("CENTER", frame, "TOP", 0, -HEADER_HEIGHT / 2)
+end
+
 function ns.SkinWindow(f)
 	if not f then
 		return
@@ -122,6 +141,10 @@ function ns.SkinWindow(f)
 	if f.delListBtn then
 		ns.SkinButton(f.delListBtn)
 	end
+
+	-- Keep the title centered on the header strip (done last: the skin may
+	-- have just created the strip, and it re-fonts the title).
+	ns.SkinTitle(f, f.title)
 end
 
 -- ---------------------------------------------------------------------------

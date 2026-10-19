@@ -46,9 +46,9 @@ function ns.ShowNoteEditor(playerName, listName, existingNote)
 			})
 		end
 
-		-- Title
+		-- Title (placed on the header strip by ns.SkinWindow)
 		local title = frame:CreateFontString(nil, "OVERLAY", "GameFontNormalLarge")
-		title:SetPoint("TOP", frame, "TOP", 0, -14)
+		title:SetPoint("CENTER", frame, "TOP", 0, -12)
 		title:SetText("")
 		frame.title = title
 
@@ -117,39 +117,11 @@ function ns.ShowNoteEditor(playerName, listName, existingNote)
 		frame.cancelBtn = cancelBtn
 
 		-- Skin Elements
-		ns.SkinCloseButton(closeBtn)
 		ns.SkinButton(saveBtn)
 		ns.SkinButton(cancelBtn)
-		if ns.skinEUI and ns.skinEUI.Shell then
-			if frame.ClearBackdrop then
-				frame:ClearBackdrop()
-			elseif frame.SetBackdrop then
-				frame:SetBackdrop(nil)
-			end
-			ns.skinEUI.Shell(frame)
-			if ns.skinEUI.Font then
-				ns.skinEUI.Font(title)
-			end
-		elseif ns.IsElvUIPresent() then
-			local S = ns.GetElvUISkins()
-			if frame.ClearBackdrop then
-				frame:ClearBackdrop()
-			elseif frame.SetBackdrop then
-				frame:SetBackdrop(nil)
-			end
-			if S and S.HandleFrame then
-				S:HandleFrame(frame, true)
-			else
-				if frame.StripTextures then
-					frame:StripTextures()
-				end
-				if frame.SetTemplate then
-					frame:SetTemplate("Transparent")
-				elseif frame.CreateBackdrop then
-					frame:CreateBackdrop("Transparent")
-				end
-			end
-		end
+		-- SkinWindow paints the shell (and its black header strip) and centers
+		-- the title on it; it skins the close button as well.
+		ns.SkinWindow(frame)
 		if scrollFrame.ScrollBar then
 			ns.SkinScrollBar(scrollFrame.ScrollBar)
 		end
