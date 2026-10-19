@@ -12,7 +12,6 @@ local L = ns.L
 local GetNumGroupMembers = G.GetNumGroupMembers
 local GetRealmName = G.GetRealmName
 local IsInGroup, IsInRaid = G.IsInGroup, G.IsInRaid
-local PlaySound = G.PlaySound
 local UnitName = G.UnitName
 local ipairs, next, pairs = G.ipairs, G.next, G.pairs
 local print = G.print
@@ -64,8 +63,8 @@ function ns.CheckGroup()
 					if lData then
 						local outMsg = string_format(lData.message or L_DEFAULT_GROUP_MSG, fullName)
 						print("|cffff0000[GroupWatch - " .. lName .. "]|r " .. outMsg)
-						if lData.sound and lData.sound > 0 then
-							PlaySound(lData.sound, "Master")
+						if lData.sound and lData.sound ~= 0 then
+							ns.PlayListSound(lData.sound)
 						end
 					end
 				end

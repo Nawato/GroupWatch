@@ -24,6 +24,10 @@ mainEventFrame:SetScript("OnEvent", function(self, event, arg1)
 		ns.CreateMinimapButton()
 		ns.RegisterLDB()
 	elseif event == "PLAYER_LOGIN" then
+		-- The client indexes media files while it starts up, so this is the
+		-- first moment the user's sound files can be found.
+		ns.RefreshUserSounds()
+
 		local ui = ns.GroupWatchUI
 		if ui and (ns.skinEUI or ns.IsElvUIPresent()) then
 			ns.SkinWindow(ui)

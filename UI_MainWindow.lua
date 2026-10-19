@@ -15,7 +15,6 @@ local L = ns.L
 local CreateFrame, UIParent = G.CreateFrame, G.UIParent
 local GameTooltip = G.GameTooltip
 local MenuUtil = G.MenuUtil
-local PlaySound = G.PlaySound
 local StaticPopup_Show = G.StaticPopup_Show
 local string_format = G.string_format
 local table_insert, table_sort = G.table_insert, G.table_sort
@@ -376,18 +375,9 @@ local function CreateUI()
 								-- Change Sound Alert Submenu
 								local soundSubMenu =
 									rootDescription:CreateButton(L["CHANGE_SOUND_ALERT"] or "Change Sound Alert")
-								for _, soundOpt in ipairs(ns.SOUND_OPTIONS) do
-									soundSubMenu:CreateButton(soundOpt.name, function()
-										local ld = GroupWatchDB.lists[listName]
-										if ld then
-											ld.sound = soundOpt.id
-											if soundOpt.id > 0 then
-												PlaySound(soundOpt.id, "Master")
-											end
-											f:Refresh()
-										end
-									end)
-								end
+								ns.BuildSoundMenu(soundSubMenu, listName, function()
+									f:Refresh()
+								end)
 							end)
 						end
 					else
@@ -469,19 +459,9 @@ local function CreateUI()
 					if MenuUtil and MenuUtil.CreateContextMenu then
 						local listName = btn.data.listName
 						MenuUtil.CreateContextMenu(btn, function(ownerRegion, rootDescription)
-							for _, soundOpt in ipairs(ns.SOUND_OPTIONS) do
-								rootDescription:CreateButton(soundOpt.name, function()
-									local ld = GroupWatchDB.lists[listName]
-									if ld then
-										ld.sound = soundOpt.id
-										btn:SetText(soundOpt.name)
-										if soundOpt.id > 0 then
-											PlaySound(soundOpt.id, "Master")
-										end
-										f:Refresh()
-									end
-								end)
-							end
+							ns.BuildSoundMenu(rootDescription, listName, function()
+								f:Refresh()
+							end)
 						end)
 					end
 				end)
@@ -490,7 +470,7 @@ local function CreateUI()
 			soundBtn.data = { listName = lName }
 			soundBtn:SetParent(headerRow)
 			soundBtn:SetPoint("LEFT", headerText, "RIGHT", 8, 0)
-			soundBtn:SetText(ns.GetSoundNameByID(lData.sound))
+			soundBtn:SetText(ns.GetSoundButtonLabel(lData.sound))
 			soundBtn:Show()
 			ns.SkinButton(soundBtn)
 

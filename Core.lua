@@ -37,6 +37,7 @@ ns.Globals = {
 	strtrim = strtrim,
 	tinsert = tinsert,
 	PlaySound = PlaySound,
+	PlaySoundFile = PlaySoundFile,
 	GetRealmName = GetRealmName,
 	GetNumGroupMembers = GetNumGroupMembers,
 	IsInGroup = IsInGroup,
@@ -86,7 +87,11 @@ ns.Globals = {
 -- ---------------------------------------------------------------------------
 ns.DEFAULT_SOUND = 8959
 
--- Available sound options
+-- Built-in sound options. A positive id is a Blizzard SoundKit id.
+--
+-- The user's own sound files (the Sounds/ folder of the addon directory) are
+-- not listed here: they are found at runtime and added to the menu by
+-- Sound.lua, keyed by their file name.
 ns.SOUND_OPTIONS = {
 	{ name = L["SOUND_WARNING"], id = 8959 },
 	{ name = L["SOUND_RAID_WARNING"], id = 12867 },
@@ -112,15 +117,6 @@ local pairs, ipairs = ns.Globals.pairs, ns.Globals.ipairs
 local string_format = ns.Globals.string_format
 local strsplit, strtrim = ns.Globals.strsplit, ns.Globals.strtrim
 local tostring = ns.Globals.tostring
-
-function ns.GetSoundNameByID(soundID)
-	for _, s in ipairs(ns.SOUND_OPTIONS) do
-		if s.id == soundID then
-			return s.name
-		end
-	end
-	return string_format(L["SOUND_CUSTOM"], soundID or 0)
-end
 
 function ns.GetDefaultListName()
 	if GroupWatchDB and GroupWatchDB.lists then

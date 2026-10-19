@@ -36,11 +36,14 @@ SlashCmdList["GROUPWATCH"] = function(msg)
 		ns.AddPlayer(arg2, arg3)
 	elseif arg1 == "remove" and arg2 then
 		ns.RemovePlayer(arg2, arg3)
+	elseif arg1 == "sound" then
+		ns.HandleSoundCommand(arg2, arg3)
 	else
 		print("|cff00ccff[GroupWatch]|r " .. L["HELP_HEADER"])
 		print(" " .. L["HELP_TOGGLE"])
 		print(" " .. L["HELP_MAP"])
 		print(" " .. L["HELP_ADD"])
 		print(" " .. L["HELP_REMOVE"])
+		print(" " .. L["HELP_SOUND_ADD"])
 	end
 end

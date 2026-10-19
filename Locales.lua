@@ -28,6 +28,22 @@ local enUS = {
 	SOUND_NONE = "No Sound",
 	SOUND_CUSTOM = "Custom (%s)",
 
+	-- User sound files (dropped into the Sounds/ folder)
+	SOUND_USER_ADD = "Add sound file...",
+	SOUND_USER_MISSING = "(missing file)",
+	MSG_SOUND_FILE_MISSING = "Sound file '%s' not found. Put it in the GroupWatch Sounds folder and restart the game.",
+	MSG_SOUND_ADDED = "Sound '%s' added.",
+	MSG_SOUND_REMOVED = "Sound '%s' removed.",
+	MSG_SOUND_NOT_FOUND = "No sound file named '%s' found. Add it to the Sounds folder and restart the game.",
+	MSG_SOUND_NOT_REGISTERED = "No sound file named '%s' is registered.",
+	MSG_SOUND_BUNDLED = "'%s' comes with the addon and cannot be removed.",
+	MSG_SOUND_BAD_NAME = "That is not a valid sound file name.",
+	MSG_SOUND_NO_FILES = "No sound files yet. Use /gw sound add <name> to add one.",
+	DIALOG_ADD_SOUND_TEXT = "Sound file name (without extension):",
+	HELP_SOUND_ADD = "/gw sound add <name> - add your own sound file",
+	HELP_SOUND_REMOVE = "/gw sound remove <name> - remove a sound file",
+	HELP_SOUND_LIST = "/gw sound list - list your sound files",
+
 	-- UI Messages & Labels
 	NO_PLAYERS_IN_LIST = "(No players on this list)",
 	MSG_LIST_NOT_FOUND = "List '%s' does not exist.",
@@ -108,6 +124,21 @@ if locale == "deDE" then
 	L["SOUND_NONE"] = "Kein Sound"
 	L["SOUND_CUSTOM"] = "Benutzerdefiniert (%s)"
 
+	L["SOUND_USER_ADD"] = "Sounddatei hinzufügen..."
+	L["SOUND_USER_MISSING"] = "(Datei fehlt)"
+	L["MSG_SOUND_FILE_MISSING"] = "Sounddatei '%s' nicht gefunden. Lege sie in den GroupWatch-Ordner Sounds und starte das Spiel neu."
+	L["MSG_SOUND_ADDED"] = "Sound '%s' hinzugefügt."
+	L["MSG_SOUND_REMOVED"] = "Sound '%s' entfernt."
+	L["MSG_SOUND_NOT_FOUND"] = "Keine Sounddatei '%s' gefunden. Lege sie in den Ordner Sounds und starte das Spiel neu."
+	L["MSG_SOUND_NOT_REGISTERED"] = "Keine Sounddatei namens '%s' ist eingetragen."
+	L["MSG_SOUND_BUNDLED"] = "'%s' ist im Addon enthalten und kann nicht entfernt werden."
+	L["MSG_SOUND_BAD_NAME"] = "Das ist kein gültiger Name einer Sounddatei."
+	L["MSG_SOUND_NO_FILES"] = "Noch keine Sounddateien. Nutze /gw sound add <Name>, um eine hinzuzufügen."
+	L["DIALOG_ADD_SOUND_TEXT"] = "Name der Sounddatei (ohne Endung):"
+	L["HELP_SOUND_ADD"] = "/gw sound add <Name> - eigene Sounddatei hinzufügen"
+	L["HELP_SOUND_REMOVE"] = "/gw sound remove <Name> - Sounddatei entfernen"
+	L["HELP_SOUND_LIST"] = "/gw sound list - eigene Sounddateien auflisten"
+
 	L["NO_PLAYERS_IN_LIST"] = "(Keine Spieler auf dieser Liste)"
 	L["MSG_LIST_NOT_FOUND"] = "Liste '%s' existiert nicht."
 	L["MSG_PLAYER_ADDED"] = "%s zur Liste '%s' hinzugefügt."
@@ -175,6 +206,21 @@ elseif locale == "frFR" then
 	L["SOUND_EXPLOSION"] = "Explosion"
 	L["SOUND_NONE"] = "Aucun son"
 	L["SOUND_CUSTOM"] = "Personnalisé (%s)"
+
+	L["SOUND_USER_ADD"] = "Ajouter un fichier son..."
+	L["SOUND_USER_MISSING"] = "(fichier manquant)"
+	L["MSG_SOUND_FILE_MISSING"] = "Fichier son '%s' introuvable. Placez-le dans le dossier Sounds de GroupWatch et redémarrez le jeu."
+	L["MSG_SOUND_ADDED"] = "Son '%s' ajouté."
+	L["MSG_SOUND_REMOVED"] = "Son '%s' supprimé."
+	L["MSG_SOUND_NOT_FOUND"] = "Aucun fichier son nommé '%s' trouvé. Ajoutez-le dans le dossier Sounds et redémarrez le jeu."
+	L["MSG_SOUND_NOT_REGISTERED"] = "Aucun fichier son nommé '%s' n'est enregistré."
+	L["MSG_SOUND_BUNDLED"] = "'%s' est fourni avec l'addon et ne peut pas être supprimé."
+	L["MSG_SOUND_BAD_NAME"] = "Ce n'est pas un nom de fichier son valide."
+	L["MSG_SOUND_NO_FILES"] = "Aucun fichier son pour l'instant. Utilisez /gw sound add <nom> pour en ajouter un."
+	L["DIALOG_ADD_SOUND_TEXT"] = "Nom du fichier son (sans extension) :"
+	L["HELP_SOUND_ADD"] = "/gw sound add <nom> - ajouter votre propre fichier son"
+	L["HELP_SOUND_REMOVE"] = "/gw sound remove <nom> - supprimer un fichier son"
+	L["HELP_SOUND_LIST"] = "/gw sound list - lister vos fichiers son"
 
 	L["NO_PLAYERS_IN_LIST"] = "(Aucun joueur dans cette liste)"
 	L["MSG_LIST_NOT_FOUND"] = "La liste « %s » n'existe pas."
@@ -244,6 +290,21 @@ elseif locale == "esES" or locale == "esMX" then
 	L["SOUND_NONE"] = "Sin sonido"
 	L["SOUND_CUSTOM"] = "Personalizado (%s)"
 
+	L["SOUND_USER_ADD"] = "Añadir archivo de sonido..."
+	L["SOUND_USER_MISSING"] = "(falta el archivo)"
+	L["MSG_SOUND_FILE_MISSING"] = "No se encuentra el archivo de sonido '%s'. Colócalo en la carpeta Sounds de GroupWatch y reinicia el juego."
+	L["MSG_SOUND_ADDED"] = "Sonido '%s' añadido."
+	L["MSG_SOUND_REMOVED"] = "Sonido '%s' eliminado."
+	L["MSG_SOUND_NOT_FOUND"] = "No se encuentra ningún archivo de sonido llamado '%s'. Añádelo a la carpeta Sounds y reinicia el juego."
+	L["MSG_SOUND_NOT_REGISTERED"] = "No hay ningún archivo de sonido llamado '%s' registrado."
+	L["MSG_SOUND_BUNDLED"] = "'%s' viene con el addon y no se puede quitar."
+	L["MSG_SOUND_BAD_NAME"] = "Ese no es un nombre de archivo de sonido válido."
+	L["MSG_SOUND_NO_FILES"] = "Todavía no hay archivos de sonido. Usa /gw sound add <nombre> para añadir uno."
+	L["DIALOG_ADD_SOUND_TEXT"] = "Nombre del archivo de sonido (sin extensión):"
+	L["HELP_SOUND_ADD"] = "/gw sound add <nombre> - añadir tu propio archivo de sonido"
+	L["HELP_SOUND_REMOVE"] = "/gw sound remove <nombre> - eliminar un archivo de sonido"
+	L["HELP_SOUND_LIST"] = "/gw sound list - listar tus archivos de sonido"
+
 	L["NO_PLAYERS_IN_LIST"] = "(No hay jugadores en esta lista)"
 	L["MSG_LIST_NOT_FOUND"] = "La lista '%s' no existe."
 	L["MSG_PLAYER_ADDED"] = "%s añadido a la lista '%s'."
@@ -311,6 +372,21 @@ elseif locale == "itIT" then
 	L["SOUND_EXPLOSION"] = "Esplosione"
 	L["SOUND_NONE"] = "Nessun suono"
 	L["SOUND_CUSTOM"] = "Personalizzato (%s)"
+
+	L["SOUND_USER_ADD"] = "Aggiungi file audio..."
+	L["SOUND_USER_MISSING"] = "(file mancante)"
+	L["MSG_SOUND_FILE_MISSING"] = "File audio '%s' non trovato. Mettilo nella cartella Sounds di GroupWatch e riavvia il gioco."
+	L["MSG_SOUND_ADDED"] = "Suono '%s' aggiunto."
+	L["MSG_SOUND_REMOVED"] = "Suono '%s' rimosso."
+	L["MSG_SOUND_NOT_FOUND"] = "Nessun file audio chiamato '%s' trovato. Aggiungilo nella cartella Sounds e riavvia il gioco."
+	L["MSG_SOUND_NOT_REGISTERED"] = "Nessun file audio chiamato '%s' è registrato."
+	L["MSG_SOUND_BUNDLED"] = "'%s' è incluso nell'addon e non può essere rimosso."
+	L["MSG_SOUND_BAD_NAME"] = "Questo non è un nome di file audio valido."
+	L["MSG_SOUND_NO_FILES"] = "Ancora nessun file audio. Usa /gw sound add <nome> per aggiungerne uno."
+	L["DIALOG_ADD_SOUND_TEXT"] = "Nome del file audio (senza estensione):"
+	L["HELP_SOUND_ADD"] = "/gw sound add <nome> - aggiungi il tuo file audio"
+	L["HELP_SOUND_REMOVE"] = "/gw sound remove <nome> - rimuovi un file audio"
+	L["HELP_SOUND_LIST"] = "/gw sound list - elenca i tuoi file audio"
 
 	L["NO_PLAYERS_IN_LIST"] = "(Nessun giocatore in questo elenco)"
 	L["MSG_LIST_NOT_FOUND"] = "L'elenco '%s' non esiste."
@@ -380,6 +456,21 @@ elseif locale == "ptBR" then
 	L["SOUND_NONE"] = "Sem som"
 	L["SOUND_CUSTOM"] = "Personalizado (%s)"
 
+	L["SOUND_USER_ADD"] = "Adicionar ficheiro de som..."
+	L["SOUND_USER_MISSING"] = "(arquivo em falta)"
+	L["MSG_SOUND_FILE_MISSING"] = "Ficheiro de som '%s' não encontrado. Coloque-o na pasta Sounds do GroupWatch e reinicie o jogo."
+	L["MSG_SOUND_ADDED"] = "Som '%s' adicionado."
+	L["MSG_SOUND_REMOVED"] = "Som '%s' removido."
+	L["MSG_SOUND_NOT_FOUND"] = "Nenhum ficheiro de som chamado '%s' encontrado. Adicione-o à pasta Sounds e reinicie o jogo."
+	L["MSG_SOUND_NOT_REGISTERED"] = "Nenhum ficheiro de som chamado '%s' está registado."
+	L["MSG_SOUND_BUNDLED"] = "'%s' vem com o addon e não pode ser removido."
+	L["MSG_SOUND_BAD_NAME"] = "Esse não é um nome de ficheiro de som válido."
+	L["MSG_SOUND_NO_FILES"] = "Ainda não há ficheiros de som. Use /gw sound add <nome> para adicionar um."
+	L["DIALOG_ADD_SOUND_TEXT"] = "Nome do ficheiro de som (sem extensão):"
+	L["HELP_SOUND_ADD"] = "/gw sound add <nome> - adicionar o seu próprio ficheiro de som"
+	L["HELP_SOUND_REMOVE"] = "/gw sound remove <nome> - remover um ficheiro de som"
+	L["HELP_SOUND_LIST"] = "/gw sound list - listar os seus ficheiros de som"
+
 	L["NO_PLAYERS_IN_LIST"] = "(Nenhum jogador nesta lista)"
 	L["MSG_LIST_NOT_FOUND"] = "A lista '%s' não existe."
 	L["MSG_PLAYER_ADDED"] = "%s adicionado à lista '%s'."
@@ -447,6 +538,21 @@ elseif locale == "ruRU" then
 	L["SOUND_EXPLOSION"] = "Взрыв"
 	L["SOUND_NONE"] = "Без звука"
 	L["SOUND_CUSTOM"] = "Свой (%s)"
+
+	L["SOUND_USER_ADD"] = "Добавить звуковой файл..."
+	L["SOUND_USER_MISSING"] = "(файл отсутствует)"
+	L["MSG_SOUND_FILE_MISSING"] = "Звуковой файл '%s' не найден. Поместите его в папку Sounds аддона GroupWatch и перезапустите игру."
+	L["MSG_SOUND_ADDED"] = "Звук '%s' добавлен."
+	L["MSG_SOUND_REMOVED"] = "Звук '%s' удалён."
+	L["MSG_SOUND_NOT_FOUND"] = "Звуковой файл '%s' не найден. Поместите его в папку Sounds и перезапустите игру."
+	L["MSG_SOUND_NOT_REGISTERED"] = "Звуковой файл с именем '%s' не зарегистрирован."
+	L["MSG_SOUND_BUNDLED"] = "'%s' входит в комплект аддона и не может быть удалён."
+	L["MSG_SOUND_BAD_NAME"] = "Это недопустимое имя звукового файла."
+	L["MSG_SOUND_NO_FILES"] = "Звуковых файлов пока нет. Используйте /gw sound add <имя>, чтобы добавить файл."
+	L["DIALOG_ADD_SOUND_TEXT"] = "Имя звукового файла (без расширения):"
+	L["HELP_SOUND_ADD"] = "/gw sound add <имя> - добавить свой звуковой файл"
+	L["HELP_SOUND_REMOVE"] = "/gw sound remove <имя> - удалить звуковой файл"
+	L["HELP_SOUND_LIST"] = "/gw sound list - показать список звуковых файлов"
 
 	L["NO_PLAYERS_IN_LIST"] = "(В этом списке нет игроков)"
 	L["MSG_LIST_NOT_FOUND"] = "Список '%s' не существует."
@@ -516,6 +622,21 @@ elseif locale == "zhCN" then
 	L["SOUND_NONE"] = "无声音"
 	L["SOUND_CUSTOM"] = "自定义 (%s)"
 
+	L["SOUND_USER_ADD"] = "添加音效文件..."
+	L["SOUND_USER_MISSING"] = "（缺少文件）"
+	L["MSG_SOUND_FILE_MISSING"] = "找不到音效文件“%s”。请将其放入 GroupWatch 的 Sounds 文件夹并重启游戏。"
+	L["MSG_SOUND_ADDED"] = "已添加音效“%s”。"
+	L["MSG_SOUND_REMOVED"] = "已移除音效“%s”。"
+	L["MSG_SOUND_NOT_FOUND"] = "找不到名为“%s”的音效文件。请将其放入 Sounds 文件夹并重启游戏。"
+	L["MSG_SOUND_NOT_REGISTERED"] = "没有注册名为“%s”的音效文件。"
+	L["MSG_SOUND_BUNDLED"] = "“%s”随插件附带，无法移除。"
+	L["MSG_SOUND_BAD_NAME"] = "这不是有效的音效文件名。"
+	L["MSG_SOUND_NO_FILES"] = "目前没有音效文件。使用 /gw sound add <名称> 添加一个。"
+	L["DIALOG_ADD_SOUND_TEXT"] = "音效文件名（不含扩展名）："
+	L["HELP_SOUND_ADD"] = "/gw sound add <名称> - 添加自己的音效文件"
+	L["HELP_SOUND_REMOVE"] = "/gw sound remove <名称> - 移除音效文件"
+	L["HELP_SOUND_LIST"] = "/gw sound list - 列出你的音效文件"
+
 	L["NO_PLAYERS_IN_LIST"] = "(该列表中暂无玩家)"
 	L["MSG_LIST_NOT_FOUND"] = "列表 '%s' 不存在。"
 	L["MSG_PLAYER_ADDED"] = "已将 %s 添加到列表 '%s'。"
@@ -584,6 +705,21 @@ elseif locale == "zhTW" then
 	L["SOUND_NONE"] = "無聲音"
 	L["SOUND_CUSTOM"] = "自訂 (%s)"
 
+	L["SOUND_USER_ADD"] = "新增音效檔案..."
+	L["SOUND_USER_MISSING"] = "（缺少檔案）"
+	L["MSG_SOUND_FILE_MISSING"] = "找不到音效檔案「%s」。請將其放入 GroupWatch 的 Sounds 資料夾並重新啟動遊戲。"
+	L["MSG_SOUND_ADDED"] = "已新增音效「%s」。"
+	L["MSG_SOUND_REMOVED"] = "已移除音效「%s」。"
+	L["MSG_SOUND_NOT_FOUND"] = "找不到名為「%s」的音效檔案。請將其放入 Sounds 資料夾並重新啟動遊戲。"
+	L["MSG_SOUND_NOT_REGISTERED"] = "沒有註冊名為「%s」的音效檔案。"
+	L["MSG_SOUND_BUNDLED"] = "「%s」隨插件附帶，無法移除。"
+	L["MSG_SOUND_BAD_NAME"] = "這不是有效的音效檔案名稱。"
+	L["MSG_SOUND_NO_FILES"] = "目前沒有音效檔案。使用 /gw sound add <名稱> 新增一個。"
+	L["DIALOG_ADD_SOUND_TEXT"] = "音效檔案名稱（不含副檔名）："
+	L["HELP_SOUND_ADD"] = "/gw sound add <名稱> - 新增自己的音效檔案"
+	L["HELP_SOUND_REMOVE"] = "/gw sound remove <名稱> - 移除音效檔案"
+	L["HELP_SOUND_LIST"] = "/gw sound list - 列出你的音效檔案"
+
 	L["NO_PLAYERS_IN_LIST"] = "(此名單中暫無玩家)"
 	L["MSG_LIST_NOT_FOUND"] = "名單 '%s' 不存在。"
 	L["MSG_PLAYER_ADDED"] = "已將 %s 新增至名單 '%s'。"
@@ -651,6 +787,21 @@ elseif locale == "koKR" then
 	L["SOUND_EXPLOSION"] = "폭발"
 	L["SOUND_NONE"] = "소리 없음"
 	L["SOUND_CUSTOM"] = "사용자 지정 (%s)"
+
+	L["SOUND_USER_ADD"] = "음향 파일 추가..."
+	L["SOUND_USER_MISSING"] = "(파일 없음)"
+	L["MSG_SOUND_FILE_MISSING"] = "음향 파일 '%s'을(를) 찾을 수 없습니다. GroupWatch의 Sounds 폴더에 넣고 게임을 다시 시작하십시오."
+	L["MSG_SOUND_ADDED"] = "음향 '%s'을(를) 추가했습니다."
+	L["MSG_SOUND_REMOVED"] = "음향 '%s'을(를) 제거했습니다."
+	L["MSG_SOUND_NOT_FOUND"] = "'%s' 음향 파일을 찾을 수 없습니다. Sounds 폴더에 넣고 게임을 다시 시작하십시오."
+	L["MSG_SOUND_NOT_REGISTERED"] = "'%s' 음향 파일이 등록되어 있지 않습니다."
+	L["MSG_SOUND_BUNDLED"] = "'%s'은(는) 애드온에 포함되어 제거할 수 없습니다."
+	L["MSG_SOUND_BAD_NAME"] = "올바르지 않은 음향 파일 이름입니다."
+	L["MSG_SOUND_NO_FILES"] = "아직 음향 파일이 없습니다. /gw sound add <이름>으로 추가하십시오."
+	L["DIALOG_ADD_SOUND_TEXT"] = "음향 파일 이름 (확장자 제외):"
+	L["HELP_SOUND_ADD"] = "/gw sound add <이름> - 나만의 음향 파일 추가"
+	L["HELP_SOUND_REMOVE"] = "/gw sound remove <이름> - 음향 파일 제거"
+	L["HELP_SOUND_LIST"] = "/gw sound list - 음향 파일 목록 보기"
 
 	L["NO_PLAYERS_IN_LIST"] = "(이 목록에 플레이어가 없습니다)"
 	L["MSG_LIST_NOT_FOUND"] = "'%s' 목록이 존재하지 않습니다."

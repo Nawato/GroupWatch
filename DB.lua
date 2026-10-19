@@ -40,6 +40,12 @@ function ns.InitDB()
 		}
 	end
 
+	-- The user's own sound files, by name (the file name without its
+	-- extension). See Sound.lua.
+	if type(GroupWatchDB.userSounds) ~= "table" then
+		GroupWatchDB.userSounds = {}
+	end
+
 	for _, listData in pairs(GroupWatchDB.lists) do
 		listData.notes = listData.notes or {}
 	end

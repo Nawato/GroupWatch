@@ -1,1 +1,10 @@
 .vscode/*
+
+# The user's own sound files are personal, not part of the addon.
+Sounds/*.ogg
+Sounds/*.mp3
+Sounds/*.wav
+
+# ...except the ones that ship with the addon.
+!Sounds/Bruh.mp3
+!Sounds/Oof.mp3

@@ -25,6 +25,9 @@ Access commands using `/gw` or `/groupwatch`:
 * `/gw map` — Toggle the minimap button on/off.
 * `/gw add <ListName> <Player-Realm>` — Add a player to a specific list.
 * `/gw remove <Player-Realm>` — Remove a player from all lists.
+* `/gw sound add <name>` — Add one of your own sound files.
+* `/gw sound remove <name>` — Remove a sound file.
+* `/gw sound list` — List your sound files.
 
 ---
 
@@ -44,6 +47,13 @@ Access commands using `/gw` or `/groupwatch`:
 ### 3. Quick Adding via Right-Click
 * Right-click any player's name in chat, target frame, guild roster, or friends list.
 * Hover over the **GroupWatch** context menu entry to instantly add or remove them from your active lists.
+
+### 4. Custom Sound Files
+* The addon ships with two sounds of its own — **Bruh** and **Oof** — which are always in the sound list of every list.
+* Drop your own `.ogg` or `.mp3` files into the `Sounds` folder inside the GroupWatch addon directory. Any file name works — `BossAlert.ogg` shows up as **BossAlert**.
+* **Restart the game completely** afterwards — the client only indexes new media files at startup, so a `/reload` is not enough.
+* Register the sound once with `/gw sound add BossAlert`, or pick **Add sound file...** in a list's sound menu and type the name.
+* As many sounds as you like. Each one is remembered, and it is marked *(missing file)* if the file is deleted. The full instructions are in `Sounds/README.txt`.
 
 ---
 
