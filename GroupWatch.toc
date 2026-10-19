@@ -12,6 +12,7 @@ Core.lua
 DB.lua
 Skins.lua
 WidgetPool.lua
+UI_DragCursor.lua
 UI_NoteEditor.lua
 UI_MainWindow.lua
 MinimapButton.lua

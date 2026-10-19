@@ -158,6 +158,28 @@ local function ClearDragVisuals()
 	end
 end
 
+-- Drop-target overlay for a row: a soft fill plus a line along the top
+-- edge, mirroring the drag cursor chip. Created once per pooled widget; the
+-- drag cursor module shows and hides it.
+local function CreateDropHighlight(row)
+	local fill = row:CreateTexture(nil, "BACKGROUND")
+	fill:SetAllPoints(row)
+	fill:SetColorTexture(1, 1, 1, 0.3)
+	fill:Hide()
+
+	-- A line across the top edge: the row's own controls (the collapse
+	-- button, the player bullet) sit at the left, so the accent goes here.
+	local bar = row:CreateTexture(nil, "BACKGROUND")
+	bar:SetPoint("TOPLEFT", row, "TOPLEFT", 0, -1)
+	bar:SetPoint("TOPRIGHT", row, "TOPRIGHT", 0, -1)
+	bar:SetHeight(2)
+	bar:SetColorTexture(1, 1, 1, 0.9)
+	bar:Hide()
+
+	row.dragHighlight = fill
+	row.dragHighlightBar = bar
+end
+
 -- ---------------------------------------------------------------------------
 -- Refresh callback (overrides the no-op stub from Core.lua)
 -- ---------------------------------------------------------------------------
@@ -270,6 +292,12 @@ local function CreateUI()
 	function f:Refresh()
 		ns.ReleaseUnused()
 
+		-- A refresh recycles the row widgets, so the highlighted drop target
+		-- is stale: drop it and let the drag cursor pick the target under
+		-- the pointer again once the new layout is in place.
+		ns.SetDragCursorTarget(nil)
+		f.dropTargets = {}
+
 		if not GroupWatchDB or not GroupWatchDB.lists then
 			return
 		end
@@ -282,6 +310,12 @@ local function CreateUI()
 
 		-- Cache commonly-used locale strings locally to avoid repeated table lookups
 		local L_NO_PLAYERS_IN_LIST = L["NO_PLAYERS_IN_LIST"]
+
+		-- Drop targets for the drag cursor: the list headers and the player
+		-- rows a dragged player can be dropped on. Rebuilt on every refresh
+		-- because the pool recycles the widgets.
+		local dropTargets = {}
+		f.dropTargets = dropTargets
 
 		-- Sort list names for a stable, deterministic UI order (default lists first)
 		local listNames = {}
@@ -311,6 +345,7 @@ local function CreateUI()
 				local btn = CreateFrame("Button", nil, content)
 				btn:SetSize(340, 22)
 				btn:RegisterForClicks("LeftButtonUp", "RightButtonUp")
+				CreateDropHighlight(btn)
 				btn:SetScript("OnClick", function(selfBtn, button)
 					local listName = btn.data.listName
 					ns.selectedList = listName
@@ -361,16 +396,25 @@ local function CreateUI()
 				end)
 				btn:SetScript("OnReceiveDrag", function(selfBtn)
 					local targetList = selfBtn.data.listName
+					ns.NotifyDragOverRow(selfBtn)
 					if TryMoveDraggedPlayer(targetList) then
 						-- moved successfully; Refresh handled by MovePlayer
 					end
 					ClearDragVisuals()
+				end)
+				-- Releasing the mouse over a target ends the drag: the chip
+				-- goes away right away.
+				btn:SetScript("OnMouseUp", function()
+					if ns.IsDragCursorActive() then
+						ns.HideDragCursor()
+					end
 				end)
 				return btn
 			end)
 			headerRow:SetPoint("TOPLEFT", content, "TOPLEFT", 0, yOffset)
 			headerRow:Show()
 			headerRow.data = { listName = lName }
+			table_insert(dropTargets, headerRow)
 
 			-- Collapse/Expand button [−] / [+]
 			local collapseBtn = ns.GetWidget("collapseBtn", function()
@@ -494,6 +538,7 @@ local function CreateUI()
 							btn:SetSize(270, 20)
 							btn:RegisterForClicks("LeftButtonUp", "RightButtonUp")
 							btn:RegisterForDrag("LeftButton")
+							CreateDropHighlight(btn)
 							btn:SetScript("OnClick", function(selfBtn, button)
 							if dragSourceRow == selfBtn then
 								-- drag cancelled on this row; do not select it
@@ -557,22 +602,33 @@ local function CreateUI()
 								dragSourceList = selfBtn.data.listName
 								dragSourceRow = selfBtn
 								selfBtn:SetAlpha(0.5)
+								ns.ShowDragCursor(selfBtn.data.playerName, selfBtn.data.listName)
 							end)
 							btn:SetScript("OnDragStop", function(selfBtn)
 								ClearDragVisuals()
+								ns.HideDragCursor()
 							end)
 							btn:SetScript("OnReceiveDrag", function(selfBtn)
 								local targetList = selfBtn.data.listName
+								ns.NotifyDragOverRow(selfBtn)
 								if TryMoveDraggedPlayer(targetList) then
 									-- moved successfully; Refresh handled by MovePlayer
 								end
 								ClearDragVisuals()
+							end)
+							-- Releasing the mouse over a target ends the drag:
+							-- the chip goes away right away.
+							btn:SetScript("OnMouseUp", function()
+								if ns.IsDragCursorActive() then
+									ns.HideDragCursor()
+								end
 							end)
 							return btn
 						end)
 						row.data = { playerName = pName, listName = lName }
 						row:SetPoint("TOPLEFT", content, "TOPLEFT", 20, yOffset)
 						row:Show()
+						table_insert(dropTargets, row)
 
 						local lineText = row.lineText
 						if not lineText then
@@ -668,7 +724,17 @@ local function CreateUI()
 		end
 
 		content:SetHeight(math_abs(yOffset) + 20)
+
+		-- The layout changed under the pointer (a move refreshes the list), so
+		-- the drop target under it is picked again right away instead of on
+		-- the next frame.
+		ns.RefreshDragCursorTarget()
 	end
+
+	-- Closing the window mid-drag (Escape) must take the drag cursor with it.
+	f:HookScript("OnHide", function()
+		ns.HideDragCursor()
+	end)
 
 	tinsert(UISpecialFrames, "GroupWatchMainWindow")
 	ns.GroupWatchUI = f
