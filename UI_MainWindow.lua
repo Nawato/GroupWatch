@@ -647,22 +647,20 @@ local function CreateUI()
 				end
 
 				if count == 0 then
-					local empty = content.emptyText
-					if not empty then
-						empty = content:CreateFontString(nil, "OVERLAY", "GameFontDisable")
+					-- One placeholder per empty list: a single shared font
+					-- string would be moved around (and hidden again) by the
+					-- next list, so only the last list would ever show it.
+					local empty = ns.GetWidget("emptyText", function()
+						local fs = content:CreateFontString(nil, "OVERLAY", "GameFontDisable")
 						if ns.skinEUI and ns.skinEUI.Font then
-							ns.skinEUI.Font(empty)
+							ns.skinEUI.Font(fs)
 						end
-					end
-					content.emptyText = empty
+						return fs
+					end)
 					empty:SetPoint("TOPLEFT", content, "TOPLEFT", 20, yOffset)
 					empty:SetText(L_NO_PLAYERS_IN_LIST)
 					empty:Show()
 					yOffset = yOffset - 22
-				else
-					if content.emptyText then
-						content.emptyText:Hide()
-					end
 				end
 			end
 

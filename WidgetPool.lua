@@ -39,16 +39,18 @@ function ns.GetWidget(poolName, createFunc)
 	return w
 end
 
---- Mark every widget of every pool as free; widgets that were already free
---- are hidden.
+--- Release every widget of every pool and hide it.
+---
+--- Called at the start of a refresh: the widgets that are needed again are
+--- re-acquired by ns.GetWidget() and shown by the caller, everything else
+--- stays hidden. Hiding on release (instead of on the *next* release) is what
+--- makes a removed row disappear immediately instead of lingering for one
+--- extra refresh.
 function ns.ReleaseUnused()
 	for _, pool in pairs(widgetPools) do
 		for _, w in ipairs(pool) do
-			if w.inUse then
-				w.inUse = false
-			else
-				w:Hide()
-			end
+			w.inUse = false
+			w:Hide()
 		end
 	end
 end
