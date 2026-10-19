@@ -8,4 +8,15 @@
 ## OptionalDeps: EllesmereUI, ElvUI
 
 Locales.lua
-GroupWatch.lua
+Core.lua
+DB.lua
+Skins.lua
+WidgetPool.lua
+UI_NoteEditor.lua
+UI_MainWindow.lua
+MinimapButton.lua
+Detection.lua
+ContextMenu.lua
+Tooltips.lua
+SlashCommands.lua
+Init.lua
