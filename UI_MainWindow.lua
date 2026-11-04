@@ -146,8 +146,7 @@ local function TryMoveDraggedPlayer(targetList)
 	if not GroupWatchDB.lists[targetList] then
 		return false
 	end
-	if GroupWatchDB.lists[targetList].players
-		and GroupWatchDB.lists[targetList].players[dragSourcePlayer] then
+	if GroupWatchDB.lists[targetList].players and GroupWatchDB.lists[targetList].players[dragSourcePlayer] then
 		return false -- already a member of the target list
 	end
 	ns.MovePlayer(dragSourcePlayer, dragSourceList, targetList)
@@ -234,11 +233,10 @@ local function CreateUI()
 	closeBtn:SetPoint("TOPRIGHT", f, "TOPRIGHT", -5, -5)
 	f.closeBtn = closeBtn
 
-	-- ScrollFrame for list area. The template adds a real scroll bar so the
-	-- list can be scrolled without a mouse wheel and shows the list depth.
-	local scrollFrame = CreateFrame("ScrollFrame", "GroupWatchScrollFrame", f, "UIPanelScrollFrameTemplate")
+	-- ScrollFrame for list area
+	local scrollFrame = CreateFrame("ScrollFrame", "GroupWatchScrollFrame", f)
 	scrollFrame:SetPoint("TOPLEFT", f, "TOPLEFT", 15, -40)
-	scrollFrame:SetPoint("BOTTOMRIGHT", f, "BOTTOMRIGHT", -42, 65)
+	scrollFrame:SetPoint("BOTTOMRIGHT", f, "BOTTOMRIGHT", -15, 65)
 
 	scrollFrame:EnableMouseWheel(true)
 	scrollFrame:SetScript("OnMouseWheel", function(self, delta)
@@ -248,10 +246,10 @@ local function CreateUI()
 	end)
 
 	f.scrollFrame = scrollFrame
-	f.scrollBar = scrollFrame.ScrollBar or _G["GroupWatchScrollFrameScrollBar"]
+	f.scrollBar = nil
 
 	local content = CreateFrame("Frame", nil, scrollFrame)
-	content:SetSize(340, 100)
+	content:SetSize(370, 100)
 	scrollFrame:SetScrollChild(content)
 
 	f.content = content
@@ -351,7 +349,7 @@ local function CreateUI()
 			-- Header container
 			local headerRow = ns.GetWidget("headerRow", function()
 				local btn = CreateFrame("Button", nil, content)
-				btn:SetSize(340, 22)
+				btn:SetSize(365, 22)
 				btn:RegisterForClicks("LeftButtonUp", "RightButtonUp")
 				CreateDropHighlight(btn)
 				btn:SetScript("OnClick", function(selfBtn, button)
@@ -371,12 +369,15 @@ local function CreateUI()
 								end)
 
 								-- Delete Option
-								local delBtn = rootDescription:CreateButton(L["DELETE_LIST"] or "Delete List", function()
-									local dialog = StaticPopup_Show("GROUPWATCH_DELETE_LIST", listName)
-									if dialog then
-										dialog.data = listName
+								local delBtn = rootDescription:CreateButton(
+									L["DELETE_LIST"] or "Delete List",
+									function()
+										local dialog = StaticPopup_Show("GROUPWATCH_DELETE_LIST", listName)
+										if dialog then
+											dialog.data = listName
+										end
 									end
-								end)
+								)
 								if ns.IsDefaultList(listName) then
 									delBtn:SetEnabled(false)
 								end
@@ -434,31 +435,31 @@ local function CreateUI()
 			collapseBtn:SetPoint("LEFT", headerRow, "LEFT", 0, 0)
 			collapseBtn:Show()
 
-				local collapseText = collapseBtn.collapseText
-				if not collapseText then
-					collapseText = collapseBtn:CreateFontString(nil, "OVERLAY", "GameFontNormal")
-					collapseText:SetPoint("CENTER", collapseBtn, "CENTER", 0, 0)
-					collapseBtn.collapseText = collapseText
-				end
-				collapseText:SetText(lData.collapsed and "|cffffd100[+]|r" or "|cffffd100[-]|r")
+			local collapseText = collapseBtn.collapseText
+			if not collapseText then
+				collapseText = collapseBtn:CreateFontString(nil, "OVERLAY", "GameFontNormal")
+				collapseText:SetPoint("CENTER", collapseBtn, "CENTER", 0, 0)
+				collapseBtn.collapseText = collapseText
+			end
+			collapseText:SetText(lData.collapsed and "|cffffd100[+]|r" or "|cffffd100[-]|r")
 
 			ns.SkinButton(collapseBtn)
 
 			-- List title — white when selected, dim gold otherwise
-				local headerText = headerRow.headerText
-				if not headerText then
-					headerText = headerRow:CreateFontString(nil, "OVERLAY", "GameFontNormalLarge")
-					headerText:SetPoint("LEFT", collapseBtn, "RIGHT", 6, 0)
-					headerRow.headerText = headerText
-				end
-				if ns.selectedList == lName then
-					headerText:SetText("|cffffffff" .. lName .. "|r")
-				else
-					headerText:SetText("|cffaaaaaa" .. lName .. "|r")
-				end
-				if ns.skinEUI and ns.skinEUI.Font then
-					ns.skinEUI.Font(headerText)
-				end
+			local headerText = headerRow.headerText
+			if not headerText then
+				headerText = headerRow:CreateFontString(nil, "OVERLAY", "GameFontNormalLarge")
+				headerText:SetPoint("LEFT", collapseBtn, "RIGHT", 6, 0)
+				headerRow.headerText = headerText
+			end
+			if ns.selectedList == lName then
+				headerText:SetText("|cffffffff" .. lName .. "|r")
+			else
+				headerText:SetText("|cffaaaaaa" .. lName .. "|r")
+			end
+			if ns.skinEUI and ns.skinEUI.Font then
+				ns.skinEUI.Font(headerText)
+			end
 
 			-- Sound dropdown button after title
 			local soundBtn = ns.GetWidget("soundBtn", function()
@@ -524,7 +525,7 @@ local function CreateUI()
 
 						local row = ns.GetWidget("playerRow", function()
 							local btn = CreateFrame("Button", nil, content)
-							btn:SetSize(270, 20)
+							btn:SetSize(290, 20)
 							btn:RegisterForClicks("LeftButtonUp", "RightButtonUp")
 							btn:RegisterForDrag("LeftButton")
 							CreateDropHighlight(btn)
@@ -552,9 +553,12 @@ local function CreateUI()
 											end)
 
 											-- Remove Player
-											rootDescription:CreateButton(L["CONTEXT_REMOVE"] or "Remove Player", function()
-												ns.RemovePlayer(pName, lName)
-											end)
+											rootDescription:CreateButton(
+												L["CONTEXT_REMOVE"] or "Remove Player",
+												function()
+													ns.RemovePlayer(pName, lName)
+												end
+											)
 
 											-- Move To List Submenu
 											local moveSubMenu =
@@ -683,7 +687,7 @@ local function CreateUI()
 							return btn
 						end)
 						noteBtn.data = { playerName = pName, listName = lName }
-						noteBtn:SetPoint("RIGHT", del, "LEFT", -2, 0)
+						noteBtn:SetPoint("RIGHT", del, "LEFT", -4, 0)
 						noteBtn:Show()
 						ns.SkinButton(noteBtn)
 
@@ -713,7 +717,9 @@ local function CreateUI()
 		end
 
 		content:SetHeight(math_abs(yOffset) + 20)
-		scrollFrame:SetVerticalScroll(math_min(scrollOffset, math_max(0, content:GetHeight() - scrollFrame:GetHeight())))
+		scrollFrame:SetVerticalScroll(
+			math_min(scrollOffset, math_max(0, content:GetHeight() - scrollFrame:GetHeight()))
+		)
 
 		-- The layout changed under the pointer (a move refreshes the list), so
 		-- the drop target under it is picked again right away instead of on

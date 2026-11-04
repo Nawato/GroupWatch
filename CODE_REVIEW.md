@@ -44,7 +44,7 @@ A second-pass review of the codebase confirms that **all identified issues from 
 | **3.1** | Multi-anchor accumulation in pooled widgets | `WidgetPool.lua:53` | **Resolved** | `w:ClearAllPoints()` is now called on all widgets in `ns.ReleaseUnused()`. |
 | **3.2** | Global frame naming collision | `UI_DragCursor.lua:302` | **Resolved** | Renamed `DragCursorFrame` -> `GroupWatchDragCursorFrame`. |
 | **3.3** | Redundant `tooltip:Show()` inside post-call | `Tooltips.lua:160` | **Resolved** | Omitted redundant manual `tooltip:Show()`. |
-| **3.4** | Missing physical scrollbar in main window | `UI_MainWindow.lua:237` | **Resolved** | Adopted `UIPanelScrollFrameTemplate`, wired `f.scrollBar` for skinning, and preserved scroll position during refresh. |
+| **3.4** | Scroll Frame layout | `UI_MainWindow.lua:237` | **Clean Layout** | Retained full-width borderless scroll area with smooth mouse-wheel scrolling and position preservation on refresh. |
 | **3.5** | Captured closure upvalues on pooled buttons | `UI_MainWindow.lua` | **Resolved** | All pooled button handlers now reference `selfBtn.data`. |
 
 ---
