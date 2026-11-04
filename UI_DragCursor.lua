@@ -17,7 +17,6 @@ local GetCursorPosition = G.GetCursorPosition
 local IsMouseButtonDown = G.IsMouseButtonDown
 local IsKeyDown = G.IsKeyDown
 local UnitClass, UnitName = G.UnitClass, G.UnitName
-local GetNumRaidMembers = G.GetNumRaidMembers
 local GetNumGroupMembers = G.GetNumGroupMembers
 local IsInRaid, IsInGroup = G.IsInRaid, G.IsInGroup
 local GetRealmName = G.GetRealmName
@@ -95,7 +94,7 @@ function ns.GetClassColorForName(fullName)
 
 	local prefix, count
 	if IsInRaid() then
-		prefix, count = "raid", GetNumRaidMembers()
+		prefix, count = "raid", GetNumGroupMembers()
 	elseif IsInGroup() then
 		prefix, count = "party", GetNumGroupMembers()
 	end
@@ -300,7 +299,7 @@ local function UpdateCursor(self)
 end
 
 local function CreateCursorFrame()
-	local f = CreateFrame("Frame", "DragCursorFrame", UIParent, "BackdropTemplate")
+	local f = CreateFrame("Frame", "GroupWatchDragCursorFrame", UIParent, "BackdropTemplate")
 	f:SetFrameStrata("HIGH")
 	f:SetFrameLevel(100)
 	f:EnableMouse(false)

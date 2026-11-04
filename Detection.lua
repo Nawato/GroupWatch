@@ -13,51 +13,53 @@ local GetNumGroupMembers = G.GetNumGroupMembers
 local GetRealmName = G.GetRealmName
 local IsInGroup, IsInRaid = G.IsInGroup, G.IsInRaid
 local UnitName = G.UnitName
+local UnitIsUnit = G.UnitIsUnit
 local ipairs, next, pairs = G.ipairs, G.next, G.pairs
 local print = G.print
 local string_format = G.string_format
-local table_insert = G.table_insert
+local wipe = G.wipe
+
+-- Players already announced during the current group session. A single
+-- GROUP_ROSTER_UPDATE is not a single event in practice (zoning, role checks,
+-- subgroup swaps and ready checks all fire it), so without this cache every
+-- fire replays all alerts. Departed players are forgotten again below, so a
+-- rejoin still announces them.
+local announcedInSession = {}
 
 function ns.CheckGroup()
 	if not IsInGroup() or not GroupWatchDB or not GroupWatchDB.lists then
+		wipe(announcedInSession)
+		return
+	end
+
+	-- fullName -> { listName, ... }, cached in DB.lua and only rebuilt when
+	-- list membership changes.
+	local watched = ns.GetWatchedIndex()
+	if next(watched) == nil then
+		wipe(announcedInSession)
 		return
 	end
 
 	local numMembers = GetNumGroupMembers()
 	local prefix = IsInRaid() and "raid" or "party"
 
-	-- Build a reverse index: fullName -> { listName, ... } so we don't scan
-	-- every list for every group member (O(members * lists) -> O(members + hits)).
-	local watched = {}
-	for lName, lData in pairs(GroupWatchDB.lists) do
-		if lData.players then
-			for pName in pairs(lData.players) do
-				if not watched[pName] then
-					watched[pName] = {}
-				end
-				table_insert(watched[pName], lName)
-			end
-		end
-	end
-
-	if next(watched) == nil then
-		return
-	end
-
 	local L_DEFAULT_GROUP_MSG = L["DEFAULT_GROUP_MSG"]
+	local currentMembers = {}
 
 	for i = 1, numMembers do
 		local unit = (prefix == "party" and i == numMembers) and "player" or (prefix .. i)
 		local name, realm = UnitName(unit)
 
-		if name and unit ~= "player" then
+		if name and not UnitIsUnit(unit, "player") then
 			if not realm or realm == "" then
 				realm = GetRealmName():gsub("%s+", "")
 			end
 			local fullName = name .. "-" .. realm
+			currentMembers[fullName] = true
 
 			local lists = watched[fullName]
-			if lists then
+			if lists and not announcedInSession[fullName] then
+				announcedInSession[fullName] = true
 				for _, lName in ipairs(lists) do
 					local lData = GroupWatchDB.lists[lName]
 					if lData then
@@ -69,6 +71,14 @@ function ns.CheckGroup()
 					end
 				end
 			end
+		end
+	end
+
+	-- Clean up members who left (or are no longer watched) so a future join
+	-- triggers a fresh alert.
+	for pName in pairs(announcedInSession) do
+		if not currentMembers[pName] or not watched[pName] then
+			announcedInSession[pName] = nil
 		end
 	end
 end

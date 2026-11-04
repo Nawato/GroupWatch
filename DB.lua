@@ -14,6 +14,7 @@ local G = ns.Globals
 local L = ns.L
 local pairs, print = G.pairs, G.print
 local string_format = G.string_format
+local table_insert = G.table_insert
 
 -- ---------------------------------------------------------------------------
 -- Schema
@@ -49,6 +50,47 @@ function ns.InitDB()
 	for _, listData in pairs(GroupWatchDB.lists) do
 		listData.notes = listData.notes or {}
 	end
+
+	ns.InvalidateWatchedIndex()
+end
+
+-- ---------------------------------------------------------------------------
+-- Watched-player reverse index
+-- ---------------------------------------------------------------------------
+local watchedIndex = nil
+
+--- Drop the cached fullName -> { listName, ... } index. Every write that can
+--- change list membership has to call this before refreshing the UI.
+function ns.InvalidateWatchedIndex()
+	watchedIndex = nil
+end
+
+--- Reverse index of every watched character: fullName -> { listName, ... }.
+--- Built on demand and reused across roster updates until the data changes,
+--- so Detection does not rebuild it on every GROUP_ROSTER_UPDATE.
+function ns.GetWatchedIndex()
+	if watchedIndex then
+		return watchedIndex
+	end
+
+	local index = {}
+	if GroupWatchDB and GroupWatchDB.lists then
+		for lName, lData in pairs(GroupWatchDB.lists) do
+			if lData.players then
+				for pName in pairs(lData.players) do
+					local lists = index[pName]
+					if not lists then
+						lists = {}
+						index[pName] = lists
+					end
+					table_insert(lists, lName)
+				end
+			end
+		end
+	end
+
+	watchedIndex = index
+	return index
 end
 
 -- ---------------------------------------------------------------------------
@@ -73,6 +115,7 @@ function ns.AddPlayer(listName, fullName)
 	GroupWatchDB.lists[listName].players[fullName] = true
 	GroupWatchDB.lists[listName].notes = GroupWatchDB.lists[listName].notes or {}
 	print("|cff00ff00[GroupWatch]|r " .. string_format(L["MSG_PLAYER_ADDED"], fullName, listName))
+	ns.InvalidateWatchedIndex()
 	ns.RefreshUI()
 end
 
@@ -97,6 +140,7 @@ function ns.RemovePlayer(fullName, listName)
 			end
 		end
 	end
+	ns.InvalidateWatchedIndex()
 	if ns.selectedPlayer == fullName then
 		ns.selectedPlayer = nil
 	end
@@ -126,6 +170,7 @@ function ns.MovePlayer(pName, sourceList, targetList)
 		GroupWatchDB.lists[targetList].notes[pName] = note
 	end
 
+	ns.InvalidateWatchedIndex()
 	ns.RefreshUI()
 end
 
@@ -144,6 +189,7 @@ function ns.CopyPlayer(pName, sourceList, targetList)
 		GroupWatchDB.lists[targetList].notes[pName] = note
 	end
 
+	ns.InvalidateWatchedIndex()
 	ns.RefreshUI()
 end
 
@@ -169,6 +215,7 @@ function ns.CreateList(listName)
 	}
 	ns.selectedList = listName
 	print("|cff00ff00[GroupWatch]|r " .. string_format(L["MSG_LIST_CREATED"], listName))
+	ns.InvalidateWatchedIndex()
 	ns.RefreshUI()
 end
 
@@ -199,6 +246,7 @@ function ns.RenameList(oldName, newName)
 		ns.selectedList = newName
 	end
 
+	ns.InvalidateWatchedIndex()
 	ns.RefreshUI()
 end
 
@@ -216,6 +264,7 @@ function ns.DeleteList(listName)
 		GroupWatchDB.lists[listName] = nil
 		print("|cffff0000[GroupWatch]|r " .. string_format(L["MSG_LIST_DELETED"], listName))
 		ns.selectedList = ns.GetDefaultListName()
+		ns.InvalidateWatchedIndex()
 		ns.RefreshUI()
 	end
 end

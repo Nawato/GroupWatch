@@ -50,6 +50,7 @@ function ns.ReleaseUnused()
 	for _, pool in pairs(widgetPools) do
 		for _, w in ipairs(pool) do
 			w.inUse = false
+			w:ClearAllPoints()
 			w:Hide()
 		end
 	end

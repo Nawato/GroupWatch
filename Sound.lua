@@ -473,17 +473,21 @@ StaticPopupDialogs["GROUPWATCH_ADD_SOUND"] = {
 	button2 = L["DIALOG_CANCEL"],
 	hasEditBox = true,
 	OnAccept = function(self)
-		local text = self.EditBox:GetText()
+		local editBox = self.editBox or self.EditBox
+		local text = editBox and editBox:GetText()
 		if text and text ~= "" then
 			ns.AddUserSound(text, self.data and self.data.listName)
 		end
 	end,
 	EditBoxOnEnterPressed = function(self)
 		local text = self:GetText()
+		local parent = self:GetParent()
 		if text and text ~= "" then
-			ns.AddUserSound(text, self.data and self.data.listName)
+			ns.AddUserSound(text, parent and parent.data and parent.data.listName)
 		end
-		self:GetParent():Hide()
+		if parent then
+			parent:Hide()
+		end
 	end,
 	timeout = 0,
 	whileDead = true,

@@ -158,7 +158,6 @@ function ns.AppendNotesToTooltip(tooltip, fullName)
 			tooltip:AddLine(string_format("|cff00ccffGroupWatch:|r |cffffd100%s|r", entry.list), 1, 1, 1, true)
 		end
 	end
-	tooltip:Show()
 end
 
 local function OnTooltipSetUnit(tooltip, data)

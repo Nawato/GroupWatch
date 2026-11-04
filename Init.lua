@@ -19,7 +19,7 @@ mainEventFrame:RegisterEvent("ADDON_LOADED")
 mainEventFrame:RegisterEvent("PLAYER_LOGIN")
 mainEventFrame:RegisterEvent("GROUP_ROSTER_UPDATE")
 mainEventFrame:SetScript("OnEvent", function(self, event, arg1)
-	if event == "ADDON_LOADED" and arg1 == "GroupWatch" then
+	if event == "ADDON_LOADED" and arg1 == ADDON_NAME then
 		ns.InitDB()
 		ns.CreateMinimapButton()
 		ns.RegisterLDB()
@@ -43,4 +43,5 @@ if IsLoggedIn and IsLoggedIn() then
 	ns.InitDB()
 	ns.CreateMinimapButton()
 	ns.RegisterLDB()
+	ns.RefreshUserSounds()
 end

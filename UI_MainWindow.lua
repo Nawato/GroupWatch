@@ -35,7 +35,8 @@ StaticPopupDialogs["GROUPWATCH_NEW_PLAYER"] = {
 	button2 = L["DIALOG_CANCEL"],
 	hasEditBox = true,
 	OnAccept = function(self)
-		local text = self.EditBox:GetText()
+		local editBox = self.editBox or self.EditBox
+		local text = editBox and editBox:GetText()
 		if text and text ~= "" then
 			local targetList = self.data or ns.selectedList or ns.GetDefaultListName()
 			ns.AddPlayer(targetList, text)
@@ -62,7 +63,8 @@ StaticPopupDialogs["GROUPWATCH_NEW_LIST"] = {
 	button2 = L["DIALOG_CANCEL"],
 	hasEditBox = true,
 	OnAccept = function(self)
-		local text = self.EditBox:GetText()
+		local editBox = self.editBox or self.EditBox
+		local text = editBox and editBox:GetText()
 		if text and text ~= "" then
 			ns.CreateList(text)
 		end
@@ -86,13 +88,15 @@ StaticPopupDialogs["GROUPWATCH_RENAME_LIST"] = {
 	button2 = L["DIALOG_CANCEL"],
 	hasEditBox = true,
 	OnShow = function(self, data)
-		if data then
-			self.EditBox:SetText(data)
-			self.EditBox:HighlightText()
+		local editBox = self.editBox or self.EditBox
+		if data and editBox then
+			editBox:SetText(data)
+			editBox:HighlightText()
 		end
 	end,
 	OnAccept = function(self, data)
-		local newName = self.EditBox:GetText()
+		local editBox = self.editBox or self.EditBox
+		local newName = editBox and editBox:GetText()
 		if newName and newName ~= "" and data then
 			ns.RenameList(data, newName)
 		end
@@ -230,10 +234,11 @@ local function CreateUI()
 	closeBtn:SetPoint("TOPRIGHT", f, "TOPRIGHT", -5, -5)
 	f.closeBtn = closeBtn
 
-	-- ScrollFrame for list area
-	local scrollFrame = CreateFrame("ScrollFrame", "GroupWatchScrollFrame", f)
+	-- ScrollFrame for list area. The template adds a real scroll bar so the
+	-- list can be scrolled without a mouse wheel and shows the list depth.
+	local scrollFrame = CreateFrame("ScrollFrame", "GroupWatchScrollFrame", f, "UIPanelScrollFrameTemplate")
 	scrollFrame:SetPoint("TOPLEFT", f, "TOPLEFT", 15, -40)
-	scrollFrame:SetPoint("BOTTOMRIGHT", f, "BOTTOMRIGHT", -15, 65)
+	scrollFrame:SetPoint("BOTTOMRIGHT", f, "BOTTOMRIGHT", -42, 65)
 
 	scrollFrame:EnableMouseWheel(true)
 	scrollFrame:SetScript("OnMouseWheel", function(self, delta)
@@ -243,7 +248,7 @@ local function CreateUI()
 	end)
 
 	f.scrollFrame = scrollFrame
-	f.scrollBar = nil
+	f.scrollBar = scrollFrame.ScrollBar or _G["GroupWatchScrollFrameScrollBar"]
 
 	local content = CreateFrame("Frame", nil, scrollFrame)
 	content:SetSize(340, 100)
@@ -255,11 +260,11 @@ local function CreateUI()
 	-- FOOTER: LIST CONTROLS
 	----------------------------------------------------
 
-	-- "−" Delete list button (Right-aligned)
+	-- "-" Delete list button (Right-aligned)
 	local delListBtn = CreateFrame("Button", nil, f, "UIPanelButtonTemplate")
 	delListBtn:SetSize(28, 24)
 	delListBtn:SetPoint("BOTTOMRIGHT", f, "BOTTOMRIGHT", -20, 22)
-	delListBtn:SetText("|cffff5555−|r")
+	delListBtn:SetText("|cffff5555-|r")
 	f.delListBtn = delListBtn
 	delListBtn:SetScript("OnClick", function()
 		if ns.IsDefaultList(ns.selectedList) then
@@ -290,6 +295,10 @@ local function CreateUI()
 	----------------------------------------------------
 	function f:Refresh()
 		ns.ReleaseUnused()
+
+		-- The scroll frame template resets its scroll bar when the content
+		-- height changes, so remember the offset and restore it after layout.
+		local scrollOffset = scrollFrame:GetVerticalScroll()
 
 		-- A refresh recycles the row widgets, so the highlighted drop target
 		-- is stale: drop it and let the drag cursor pick the target under
@@ -346,11 +355,11 @@ local function CreateUI()
 				btn:RegisterForClicks("LeftButtonUp", "RightButtonUp")
 				CreateDropHighlight(btn)
 				btn:SetScript("OnClick", function(selfBtn, button)
-					local listName = btn.data.listName
+					local listName = selfBtn.data.listName
 					ns.selectedList = listName
 					if button == "RightButton" then
 						if MenuUtil and MenuUtil.CreateContextMenu then
-							MenuUtil.CreateContextMenu(btn, function(ownerRegion, rootDescription)
+							MenuUtil.CreateContextMenu(selfBtn, function(ownerRegion, rootDescription)
 								rootDescription:CreateTitle(listName)
 
 								-- Rename Option
@@ -406,13 +415,13 @@ local function CreateUI()
 			headerRow.data = { listName = lName }
 			table_insert(dropTargets, headerRow)
 
-			-- Collapse/Expand button [−] / [+]
+			-- Collapse/Expand button [-] / [+]
 			local collapseBtn = ns.GetWidget("collapseBtn", function()
 				local btn = CreateFrame("Button", nil, headerRow)
 				btn:SetSize(18, 18)
 				btn:SetPoint("LEFT", headerRow, "LEFT", 0, 0)
 				btn:SetScript("OnClick", function(selfBtn)
-					local ld = GroupWatchDB.lists[btn.data.listName]
+					local ld = GroupWatchDB.lists[selfBtn.data.listName]
 					if ld then
 						ld.collapsed = not ld.collapsed
 						f:Refresh()
@@ -431,7 +440,7 @@ local function CreateUI()
 					collapseText:SetPoint("CENTER", collapseBtn, "CENTER", 0, 0)
 					collapseBtn.collapseText = collapseText
 				end
-				collapseText:SetText(lData.collapsed and "|cffffd100[+]|r" or "|cffffd100[−]|r")
+				collapseText:SetText(lData.collapsed and "|cffffd100[+]|r" or "|cffffd100[-]|r")
 
 			ns.SkinButton(collapseBtn)
 
@@ -457,8 +466,8 @@ local function CreateUI()
 				btn:SetSize(100, 20)
 				btn:SetScript("OnClick", function(selfBtn)
 					if MenuUtil and MenuUtil.CreateContextMenu then
-						local listName = btn.data.listName
-						MenuUtil.CreateContextMenu(btn, function(ownerRegion, rootDescription)
+						local listName = selfBtn.data.listName
+						MenuUtil.CreateContextMenu(selfBtn, function(ownerRegion, rootDescription)
 							ns.BuildSoundMenu(rootDescription, listName, function()
 								f:Refresh()
 							end)
@@ -480,7 +489,7 @@ local function CreateUI()
 				btn:SetSize(22, 20)
 				btn:SetText("|cff00ff00+|r")
 				btn:SetScript("OnClick", function(selfBtn)
-					local listName = btn.data.listName
+					local listName = selfBtn.data.listName
 					local dialog = StaticPopup_Show("GROUPWATCH_NEW_PLAYER")
 					if dialog then
 						dialog.data = listName
@@ -491,7 +500,7 @@ local function CreateUI()
 			addPlayerBtn.data = { listName = lName }
 			addPlayerBtn:SetParent(headerRow)
 			addPlayerBtn:SetPoint("TOP", headerRow, "TOP", 0, 0)
-			addPlayerBtn:SetPoint("RIGHT", f, "RIGHT", -20, 0)
+			addPlayerBtn:SetPoint("RIGHT", headerRow, "RIGHT", 0, 0)
 			addPlayerBtn:Show()
 			ns.SkinButton(addPlayerBtn)
 
@@ -520,12 +529,12 @@ local function CreateUI()
 							btn:RegisterForDrag("LeftButton")
 							CreateDropHighlight(btn)
 							btn:SetScript("OnClick", function(selfBtn, button)
-							if dragSourceRow == selfBtn then
-								-- drag cancelled on this row; do not select it
-								return
-							end
-								local pName = btn.data.playerName
-								local lName = btn.data.listName
+								if dragSourceRow == selfBtn then
+									-- drag cancelled on this row; do not select it
+									return
+								end
+								local pName = selfBtn.data.playerName
+								local lName = selfBtn.data.listName
 								ns.selectedPlayer = pName
 								ns.selectedList = lName
 
@@ -534,7 +543,7 @@ local function CreateUI()
 										-- Re-resolve note at click time so it's current
 										local ld = GroupWatchDB.lists[lName]
 										local note = ld and ld.notes and ld.notes[pName]
-										MenuUtil.CreateContextMenu(btn, function(ownerRegion, rootDescription)
+										MenuUtil.CreateContextMenu(selfBtn, function(ownerRegion, rootDescription)
 											rootDescription:CreateTitle(pName)
 
 											-- Edit Note
@@ -625,14 +634,14 @@ local function CreateUI()
 							lineText:SetText("• " .. pName)
 						end
 
-						-- (−) Remove player button per row
+						-- (-) Remove player button per row
 						local del = ns.GetWidget("delBtn", function()
 							local btn = CreateFrame("Button", nil, content, "UIPanelButtonTemplate")
 							btn:SetSize(22, 20)
-							btn:SetText("|cffff5555−|r")
+							btn:SetText("|cffff5555-|r")
 							btn:SetScript("OnClick", function(selfBtn)
-								local pName = btn.data.playerName
-								local lName = btn.data.listName
+								local pName = selfBtn.data.playerName
+								local lName = selfBtn.data.listName
 								ns.RemovePlayer(pName, lName)
 							end)
 							return btn
@@ -648,18 +657,18 @@ local function CreateUI()
 							btn:SetSize(22, 20)
 							btn:SetText("|cffd9b44aN|r")
 							btn:SetScript("OnClick", function(selfBtn)
-								local pName = btn.data.playerName
-								local lName = btn.data.listName
+								local pName = selfBtn.data.playerName
+								local lName = selfBtn.data.listName
 								local ld = GroupWatchDB.lists[lName]
 								local note = ld and ld.notes and ld.notes[pName]
 								ns.ShowNoteEditor(pName, lName, note)
 							end)
 							btn:SetScript("OnEnter", function(selfBtn)
-								local pName = btn.data.playerName
-								local lName = btn.data.listName
+								local pName = selfBtn.data.playerName
+								local lName = selfBtn.data.listName
 								local ld = GroupWatchDB.lists[lName]
 								local note = ld and ld.notes and ld.notes[pName]
-								GameTooltip:SetOwner(btn, "ANCHOR_RIGHT")
+								GameTooltip:SetOwner(selfBtn, "ANCHOR_RIGHT")
 								GameTooltip:ClearLines()
 								if note and note ~= "" then
 									GameTooltip:AddLine(string_format(L["NOTE_TOOLTIP"], note), 1, 1, 1, true)
@@ -704,6 +713,7 @@ local function CreateUI()
 		end
 
 		content:SetHeight(math_abs(yOffset) + 20)
+		scrollFrame:SetVerticalScroll(math_min(scrollOffset, math_max(0, content:GetHeight() - scrollFrame:GetHeight())))
 
 		-- The layout changed under the pointer (a move refreshes the list), so
 		-- the drop target under it is picked again right away instead of on
