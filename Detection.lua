@@ -10,7 +10,6 @@ local ADDON_NAME, ns = ...
 local G = ns.Globals
 local L = ns.L
 local GetNumGroupMembers = G.GetNumGroupMembers
-local GetRealmName = G.GetRealmName
 local IsInGroup, IsInRaid = G.IsInGroup, G.IsInRaid
 local UnitName = G.UnitName
 local UnitIsUnit = G.UnitIsUnit
@@ -19,7 +18,6 @@ local pcall = G.pcall
 local type = G.type
 local print = G.print
 local string_format = G.string_format
-local strtrim = G.strtrim
 local wipe = G.wipe
 
 -- Players already announced during the current group session. A single
@@ -77,11 +75,7 @@ function ns.CheckGroup()
 		if type(name) == "string" and name ~= "" then
 			local okSelf, isSelf = pcall(UnitIsUnit, unit, "player")
 			if not okSelf or not isSelf then
-				if type(realm) ~= "string" or realm == "" then
-					realm = (GetRealmName and GetRealmName() or ""):gsub("%s+", "")
-				else
-					realm = strtrim(realm):gsub("%s+", "")
-				end
+				realm = ns.NormalizeRealm(realm)
 				local fullName = name .. "-" .. realm
 				currentMembers[fullName] = true
 

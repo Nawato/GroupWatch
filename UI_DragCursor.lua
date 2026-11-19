@@ -19,7 +19,6 @@ local IsKeyDown = G.IsKeyDown
 local UnitClass, UnitName = G.UnitClass, G.UnitName
 local GetNumGroupMembers = G.GetNumGroupMembers
 local IsInRaid, IsInGroup = G.IsInRaid, G.IsInGroup
-local GetRealmName = G.GetRealmName
 local pcall, type = G.pcall, G.type
 local math_min, math_max = G.math_min, G.math_max
 
@@ -54,11 +53,7 @@ local function UnitFullName(unit)
 	if not ok or type(name) ~= "string" or name == "" then
 		return nil
 	end
-	if type(realm) ~= "string" or realm == "" then
-		realm = (GetRealmName and GetRealmName() or ""):gsub("%s+", "")
-	else
-		realm = realm:gsub("%s+", "")
-	end
+	realm = ns.NormalizeRealm(realm)
 	return name .. "-" .. realm
 end
 

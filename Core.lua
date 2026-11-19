@@ -39,6 +39,8 @@ ns.Globals = {
 	PlaySound = PlaySound,
 	PlaySoundFile = PlaySoundFile,
 	GetRealmName = GetRealmName,
+	GetNormalizedRealmName = GetNormalizedRealmName,
+	Ambiguate = Ambiguate,
 	GetNumGroupMembers = GetNumGroupMembers,
 	IsInGroup = IsInGroup,
 	IsInRaid = IsInRaid,
@@ -155,12 +157,57 @@ function ns.GetFullName(unitOrName)
 	if name == "" then
 		return nil
 	end
-	if type(realm) ~= "string" or realm == "" then
-		realm = (ns.Globals.GetRealmName and ns.Globals.GetRealmName() or ""):gsub("%s+", "")
-	else
-		realm = strtrim(realm):gsub("%s+", "")
-	end
+	realm = ns.NormalizeRealm(realm)
 	return name .. "-" .. realm
+end
+
+--- The player's own realm, normalized (no spaces) for use in "Name-Realm"
+--- keys. Prefers GetNormalizedRealmName where the client offers it and
+--- falls back to GetRealmName. Never throws: without either API (or when
+--- both fail) it returns "".
+function ns.GetHomeRealm()
+	local g = ns.Globals
+	if g.GetNormalizedRealmName then
+		local ok, res = pcall(g.GetNormalizedRealmName)
+		if ok and type(res) == "string" and strtrim(res) ~= "" then
+			return strtrim(res):gsub("%s+", "")
+		end
+	end
+	if g.GetRealmName then
+		local ok, res = pcall(g.GetRealmName)
+		if ok and type(res) == "string" then
+			return res:gsub("%s+", "")
+		end
+	end
+	return ""
+end
+
+--- Normalize a realm fragment for "Name-Realm" keys: a usable realm is
+--- trimmed of surrounding and embedded spaces, anything else falls back to
+--- the home realm. Never throws.
+function ns.NormalizeRealm(realm)
+	if type(realm) == "string" and strtrim(realm) ~= "" then
+		return strtrim(realm):gsub("%s+", "")
+	end
+	return ns.GetHomeRealm()
+end
+
+--- Short display form of a "Name-Realm" key via Ambiguate where the client
+--- offers it, otherwise the full key unchanged. Never throws. Callers that
+--- need a stable identity must keep using the full key; this is display
+--- only, never a persistent id.
+function ns.GetDisplayName(fullName)
+	if type(fullName) ~= "string" or fullName == "" then
+		return fullName
+	end
+	local Ambiguate = ns.Globals.Ambiguate
+	if Ambiguate then
+		local ok, res = pcall(Ambiguate, fullName, "short")
+		if ok and type(res) == "string" and res ~= "" then
+			return res
+		end
+	end
+	return fullName
 end
 
 -- ---------------------------------------------------------------------------

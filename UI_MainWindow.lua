@@ -462,7 +462,7 @@ local function CreateUI()
 			else
 				headerText:SetText("|cffaaaaaa" .. lName .. "|r")
 			end
-			if ns.skinEUI and ns.skinEUI.Font then
+			if ns.skinEUI and type(ns.skinEUI.Font) == "function" then
 				ns.skinEUI.Font(headerText)
 			end
 
@@ -636,7 +636,7 @@ local function CreateUI()
 						if not lineText then
 							lineText = row:CreateFontString(nil, "OVERLAY", "GameFontHighlight")
 							lineText:SetPoint("LEFT", row, "LEFT", 0, 0)
-							if ns.skinEUI and ns.skinEUI.Font then
+							if ns.skinEUI and type(ns.skinEUI.Font) == "function" then
 								ns.skinEUI.Font(lineText)
 							end
 						end
@@ -710,7 +710,7 @@ local function CreateUI()
 					-- next list, so only the last list would ever show it.
 					local empty = ns.GetWidget("emptyText", function()
 						local fs = content:CreateFontString(nil, "OVERLAY", "GameFontDisable")
-						if ns.skinEUI and ns.skinEUI.Font then
+						if ns.skinEUI and type(ns.skinEUI.Font) == "function" then
 							ns.skinEUI.Font(fs)
 						end
 						return fs

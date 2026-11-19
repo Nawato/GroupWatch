@@ -22,6 +22,16 @@ local NoteEditorFrame = nil
 --- Open the note editor for `playerName` inside `listName`.
 --- `existingNote` is the note that is currently stored (may be nil).
 function ns.ShowNoteEditor(playerName, listName, existingNote)
+	-- Both names are required: without a valid player there is nothing to
+	-- save a note on, and every write below (title, cursor, save) assumes
+	-- them. A nil/invalid opener must never throw.
+	if type(playerName) ~= "string" or playerName == "" then
+		return
+	end
+	if type(listName) ~= "string" or listName == "" then
+		return
+	end
+	local noteText = type(existingNote) == "string" and existingNote or ""
 	if not NoteEditorFrame then
 		local frame = CreateFrame("Frame", "GroupWatchNoteEditor", UIParent, "BackdropTemplate")
 		frame:SetSize(420, 320)
@@ -78,10 +88,24 @@ function ns.ShowNoteEditor(playerName, listName, existingNote)
 			self:Insert("\n")
 		end)
 
-		-- Cache font height once; only recompute line count on text change
-		local editFont = editBox:GetFontObject()
+		-- Cache font height once; only recompute line count on text change.
+		-- GetFontObject may be nil on restricted clients, so the handler
+		-- falls back to a default line height instead of throwing.
+		local editFont = nil
+		if editBox.GetFontObject then
+			local okFont, fontObj = pcall(editBox.GetFontObject, editBox)
+			if okFont then
+				editFont = fontObj
+			end
+		end
 		editBox:SetScript("OnTextChanged", function(self)
-			local _, h = editFont:GetFont()
+			local h = nil
+			if editFont and editFont.GetFont then
+				local okH, _, fh = pcall(editFont.GetFont, editFont)
+				if okH then
+					h = fh
+				end
+			end
 			local text = self:GetText() or ""
 			local numLines = select(2, string_gsub(text, "\n", "\n")) + 1
 			local lineHeight = h and (h + 2) or 14
@@ -133,14 +157,21 @@ function ns.ShowNoteEditor(playerName, listName, existingNote)
 	local f = NoteEditorFrame
 	f.noteData = { listName = listName, playerName = playerName }
 	f.title:SetText(string_format(L["DIALOG_EDIT_NOTE_TEXT"], playerName))
-	f.editBox:SetText(existingNote or "")
-	f.editBox:SetCursorPosition(string_len(existingNote or ""))
+	f.editBox:SetText(noteText)
+	if f.editBox.SetCursorPosition and type(f.editBox.GetText) == "function" then
+		local okLen, curText = pcall(f.editBox.GetText, f.editBox)
+		f.editBox:SetCursorPosition(string_len((okLen and type(curText) == "string") and curText or noteText))
+	end
 
-	C_Timer.After(0, function()
-		if f.scrollFrame:GetWidth() > 0 then
-			f.editBox:SetWidth(f.scrollFrame:GetWidth() - 10)
-		end
-	end)
+	-- C_Timer is localized at load and may be nil in restricted/test
+	-- contexts; the deferred resize is best-effort only.
+	if C_Timer and type(C_Timer.After) == "function" then
+		C_Timer.After(0, function()
+			if f.scrollFrame:GetWidth() > 0 then
+				f.editBox:SetWidth(f.scrollFrame:GetWidth() - 10)
+			end
+		end)
+	end
 	f:Show()
 	f.editBox:SetFocus()
 end

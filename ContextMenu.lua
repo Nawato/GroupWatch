@@ -12,7 +12,6 @@ local ADDON_NAME, ns = ...
 
 local G = ns.Globals
 local L = ns.L
-local GetRealmName = G.GetRealmName
 local Menu = G.Menu
 local UnitIsPlayer, UnitName = G.UnitIsPlayer, G.UnitName
 local ipairs, pairs, pcall = G.ipairs, G.pairs, G.pcall
@@ -43,9 +42,9 @@ function ns.GetPlayerFullNameFromUnit(unit)
 		return nil
 	end
 	if type(realm) ~= "string" or realm == "" then
-		realm = (GetRealmName and GetRealmName() or ""):gsub("%s+", "")
+		realm = ns.GetHomeRealm()
 	else
-		realm = strtrim(realm):gsub("%s+", "")
+		realm = ns.NormalizeRealm(realm)
 	end
 	return name .. "-" .. realm
 end
@@ -91,11 +90,7 @@ function ns.GetPlayerFullNameFromContext(contextData)
 		local realmName = gameInfo.realmName
 		if type(charName) == "string" and charName ~= "" then
 			charName = strtrim(charName)
-			if type(realmName) ~= "string" or realmName == "" then
-				realmName = (GetRealmName and GetRealmName() or ""):gsub("%s+", "")
-			else
-				realmName = strtrim(realmName):gsub("%s+", "")
-			end
+			realmName = ns.NormalizeRealm(realmName)
 			return charName .. "-" .. realmName
 		end
 	end

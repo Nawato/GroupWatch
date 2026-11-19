@@ -24,6 +24,11 @@ mainEventFrame:SetScript("OnEvent", function(self, event, arg1)
 		ns.CreateMinimapButton()
 		ns.RegisterLDB()
 	elseif event == "PLAYER_LOGIN" then
+		-- A UI library that showed up late invalidates the cached skin
+		-- lookup so it is still picked up.
+		if ns.InvalidateElvUICache then
+			ns.InvalidateElvUICache()
+		end
 		-- The client indexes media files while it starts up, so this is the
 		-- first moment the user's sound files can be found.
 		ns.RefreshUserSounds()

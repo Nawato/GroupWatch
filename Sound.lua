@@ -350,7 +350,11 @@ local function PlayUserSound(name)
 	end
 
 	-- A file the client does not know can still make PlaySoundFile error,
-	-- so the call is guarded: a missing sound must never throw.
+	-- so the call is guarded: a missing sound must never throw. The API is
+	-- localized at load and may be nil in restricted/test contexts.
+	if type(PlaySoundFile) ~= "function" then
+		return false
+	end
 	local ok, willPlay = pcall(PlaySoundFile, path, "Master")
 	if not ok then
 		return false
@@ -390,6 +394,11 @@ function ns.PlayListSound(sound)
 		return PlayUserSound("Custom" .. tostring(-sound))
 	end
 
+	-- PlaySound is localized at load and may be nil in restricted/test
+	-- contexts; a missing sound API must never throw.
+	if type(PlaySound) ~= "function" then
+		return false
+	end
 	PlaySound(sound, "Master")
 	return true
 end

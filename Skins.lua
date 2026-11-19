@@ -16,14 +16,46 @@ ns.skinEUI = nil
 -- ---------------------------------------------------------------------------
 -- Engine detection
 -- ---------------------------------------------------------------------------
-function ns.IsElvUIPresent()
-	return (ElvUI and ElvUI[1] and ElvUI[1]:GetModule("Skins")) and true or false
+-- The ElvUI skin module, resolved once and cached so a full list refresh
+-- (one GetModule call per button per row) does not hammer ElvUI. The cache
+-- is dropped by ns.InvalidateElvUICache, which Init.lua calls on
+-- PLAYER_LOGIN so a UI library that shows up late is still picked up.
+local elvCacheValid = false
+local elvSkinsModule = nil
+
+local function FetchElvUISkins()
+	if type(ElvUI) ~= "table" or type(ElvUI[1]) ~= "table" then
+		return nil
+	end
+	-- GetModule throws when the module is unknown; a throwing skin engine
+	-- must never break the addon.
+	local accessor = ElvUI[1].GetModule
+	if type(accessor) ~= "function" then
+		return nil
+	end
+	local ok, mod = pcall(accessor, ElvUI[1], "Skins")
+	if not ok or type(mod) ~= "table" then
+		return nil
+	end
+	return mod
 end
 
 function ns.GetElvUISkins()
-	if ElvUI and ElvUI[1] then
-		return ElvUI[1]:GetModule("Skins")
+	if elvCacheValid then
+		return elvSkinsModule
 	end
+	elvCacheValid = true
+	elvSkinsModule = FetchElvUISkins()
+	return elvSkinsModule
+end
+
+function ns.IsElvUIPresent()
+	return ns.GetElvUISkins() ~= nil
+end
+
+function ns.InvalidateElvUICache()
+	elvCacheValid = false
+	elvSkinsModule = nil
 end
 
 -- ---------------------------------------------------------------------------
@@ -33,13 +65,13 @@ function ns.SkinButton(btn)
 	if not btn then
 		return
 	end
-	if skinEUI and skinEUI.Button then
+	if skinEUI and type(skinEUI.Button) == "function" then
 		skinEUI.Button(btn)
-	elseif ns.IsElvUIPresent() then
-		local S = ns.GetElvUISkins()
-		if S and S.HandleButton then
-			S:HandleButton(btn)
-		end
+		return
+	end
+	local S = ns.GetElvUISkins()
+	if S and type(S.HandleButton) == "function" then
+		S:HandleButton(btn)
 	end
 end
 
@@ -47,13 +79,13 @@ function ns.SkinCloseButton(btn)
 	if not btn then
 		return
 	end
-	if skinEUI and skinEUI.CloseButton then
+	if skinEUI and type(skinEUI.CloseButton) == "function" then
 		skinEUI.CloseButton(btn)
-	elseif ns.IsElvUIPresent() then
-		local S = ns.GetElvUISkins()
-		if S and S.HandleCloseButton then
-			S:HandleCloseButton(btn)
-		end
+		return
+	end
+	local S = ns.GetElvUISkins()
+	if S and type(S.HandleCloseButton) == "function" then
+		S:HandleCloseButton(btn)
 	end
 end
 
@@ -61,13 +93,13 @@ function ns.SkinScrollBar(sb)
 	if not sb then
 		return
 	end
-	if skinEUI and skinEUI.ScrollBar then
+	if skinEUI and type(skinEUI.ScrollBar) == "function" then
 		skinEUI.ScrollBar(sb)
-	elseif ns.IsElvUIPresent() then
-		local S = ns.GetElvUISkins()
-		if S and S.HandleScrollBar then
-			S:HandleScrollBar(sb)
-		end
+		return
+	end
+	local S = ns.GetElvUISkins()
+	if S and type(S.HandleScrollBar) == "function" then
+		S:HandleScrollBar(sb)
 	end
 end
 
@@ -95,28 +127,31 @@ function ns.SkinWindow(f)
 		return
 	end
 
-	if skinEUI and skinEUI.Shell then
+	-- Resolved once per window: every button/row below reuses the same
+	-- module instead of calling GetModule again for each of them.
+	local elvSkins = ns.GetElvUISkins()
+
+	if skinEUI and type(skinEUI.Shell) == "function" then
 		if f.ClearBackdrop then
 			f:ClearBackdrop()
 		elseif f.SetBackdrop then
 			f:SetBackdrop(nil)
 		end
 		skinEUI.Shell(f)
-		if f.title and skinEUI.Font then
+		if f.title and type(skinEUI.Font) == "function" then
 			skinEUI.Font(f.title)
 		end
-		if f.listLabel and skinEUI.Font then
+		if f.listLabel and type(skinEUI.Font) == "function" then
 			skinEUI.Font(f.listLabel)
 		end
-	elseif ns.IsElvUIPresent() then
-		local S = ns.GetElvUISkins()
+	elseif elvSkins then
 		if f.ClearBackdrop then
 			f:ClearBackdrop()
 		elseif f.SetBackdrop then
 			f:SetBackdrop(nil)
 		end
-		if S and S.HandleFrame then
-			S:HandleFrame(f, true)
+		if type(elvSkins.HandleFrame) == "function" then
+			elvSkins:HandleFrame(f, true)
 		else
 			if f.StripTextures then
 				f:StripTextures()

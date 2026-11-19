@@ -13,6 +13,8 @@ Stubs = {
 	isPlayer = {}, -- unit -> truthy
 	exists = {}, -- unit -> truthy (default: unit known in units table)
 	class = {}, -- unit -> class token
+	normalizedRealm = nil, -- GetNormalizedRealmName return (or { err=... })
+	ambiguateErr = nil, -- error to throw from Ambiguate (nil = no throw)
 	inGroup = false,
 	inRaid = false,
 	numMembers = 0,
@@ -26,6 +28,8 @@ Stubs = {
 
 function Stubs.reset()
 	Stubs.realm = "My Realm"
+	Stubs.normalizedRealm = nil
+	Stubs.ambiguateErr = nil
 	Stubs.units = {}
 	Stubs.isPlayer = {}
 	Stubs.exists = {}
@@ -94,6 +98,27 @@ end
 
 function GetRealmName()
 	return Stubs.realm
+end
+
+function GetNormalizedRealmName()
+	local v = Stubs.normalizedRealm
+	if type(v) == "table" and v.err then
+		error(v.err)
+	end
+	return v
+end
+
+function Ambiguate(fullName, context)
+	if Stubs.ambiguateErr then
+		error(Stubs.ambiguateErr)
+	end
+	if type(fullName) ~= "string" then
+		return fullName
+	end
+	if context == "short" then
+		return (fullName:gsub("%-.*$", ""))
+	end
+	return fullName
 end
 
 function UnitName(unit)

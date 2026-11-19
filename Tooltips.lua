@@ -13,13 +13,12 @@ local C_LFGList = G.C_LFGList
 local Enum = G.Enum
 local GameTooltip = G.GameTooltip
 local GetPlayerInfoByGUID = G.GetPlayerInfoByGUID
-local GetRealmName = G.GetRealmName
 local TooltipDataProcessor = G.TooltipDataProcessor
 local TooltipUtil = G.TooltipUtil
 local UnitExists = G.UnitExists
 local hooksecurefunc = G.hooksecurefunc
 local ipairs, pairs, pcall, type = G.ipairs, G.pairs, G.pcall, G.type
-local strsplit, strtrim = G.strsplit, G.strtrim
+local strsplit = G.strsplit
 local string_format = G.string_format
 local table_insert, table_sort = G.table_insert, G.table_sort
 
@@ -64,13 +63,13 @@ local function GetPlayerFullNameFromTooltip(tooltip, data)
 		end)
 
 		if ok and isPlayerGUID and GetPlayerInfoByGUID then
+			-- GetPlayerInfoByGUID returns: class, classFilename, race,
+			-- raceFilename, sex, name (6th), realm (7th). Positional unpack
+			-- must stay in this order; never parse/store GUID substrings
+			-- as persistent ids.
 			local okInfo, _, _, _, _, _, pName, pRealm = pcall(GetPlayerInfoByGUID, data.guid)
 			if okInfo and type(pName) == "string" and pName ~= "" then
-				if type(pRealm) ~= "string" or pRealm == "" then
-					pRealm = (GetRealmName and GetRealmName() or ""):gsub("%s+", "")
-				else
-					pRealm = strtrim(pRealm):gsub("%s+", "")
-				end
+				pRealm = ns.NormalizeRealm(pRealm)
 				return pName .. "-" .. pRealm
 			end
 		end
