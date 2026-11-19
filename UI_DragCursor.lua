@@ -20,6 +20,7 @@ local UnitClass, UnitName = G.UnitClass, G.UnitName
 local GetNumGroupMembers = G.GetNumGroupMembers
 local IsInRaid, IsInGroup = G.IsInRaid, G.IsInGroup
 local GetRealmName = G.GetRealmName
+local pcall, type = G.pcall, G.type
 local math_min, math_max = G.math_min, G.math_max
 
 -- Appearance
@@ -46,12 +47,15 @@ local dragR, dragG, dragB = NEUTRAL_R, NEUTRAL_G, NEUTRAL_B
 
 -- "Name-Realm" of a unit, built the way Detection.lua builds its keys.
 local function UnitFullName(unit)
-	local name, realm = UnitName(unit)
-	if not name or name == "" then
+	if type(unit) ~= "string" then
 		return nil
 	end
-	if not realm or realm == "" then
-		realm = GetRealmName():gsub("%s+", "")
+	local ok, name, realm = pcall(UnitName, unit)
+	if not ok or type(name) ~= "string" or name == "" then
+		return nil
+	end
+	if type(realm) ~= "string" or realm == "" then
+		realm = (GetRealmName and GetRealmName() or ""):gsub("%s+", "")
 	else
 		realm = realm:gsub("%s+", "")
 	end

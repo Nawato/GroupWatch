@@ -16,6 +16,7 @@ local GetRealmName = G.GetRealmName
 local Menu = G.Menu
 local UnitIsPlayer, UnitName = G.UnitIsPlayer, G.UnitName
 local ipairs, pairs, pcall = G.ipairs, G.pairs, G.pcall
+local type = G.type
 local strtrim = G.strtrim
 local string_format = G.string_format
 local table_insert, table_sort = G.table_insert, G.table_sort
@@ -25,7 +26,7 @@ local tostring = G.tostring
 -- Name resolution
 -- ---------------------------------------------------------------------------
 function ns.GetPlayerFullNameFromUnit(unit)
-	if not unit then
+	if type(unit) ~= "string" then
 		return nil
 	end
 	local ok, isPlayer = pcall(UnitIsPlayer, unit)
@@ -34,15 +35,15 @@ function ns.GetPlayerFullNameFromUnit(unit)
 	end
 
 	local okName, name, realm = pcall(UnitName, unit)
-	if not okName or not name or name == "" then
+	if not okName or type(name) ~= "string" or name == "" then
 		return nil
 	end
 	name = strtrim(name)
 	if name == "" then
 		return nil
 	end
-	if not realm or realm == "" then
-		realm = GetRealmName():gsub("%s+", "")
+	if type(realm) ~= "string" or realm == "" then
+		realm = (GetRealmName and GetRealmName() or ""):gsub("%s+", "")
 	else
 		realm = strtrim(realm):gsub("%s+", "")
 	end
@@ -50,7 +51,7 @@ function ns.GetPlayerFullNameFromUnit(unit)
 end
 
 function ns.GetPlayerFullNameFromContext(contextData)
-	if not contextData then
+	if type(contextData) ~= "table" then
 		return nil
 	end
 
@@ -63,11 +64,11 @@ function ns.GetPlayerFullNameFromContext(contextData)
 
 	local name = contextData.name
 	local server = contextData.server or contextData.realm
-	if name and name ~= "" then
-		name = tostring(name):gsub("%*", "")
+	if type(name) == "string" and name ~= "" then
+		name = name:gsub("%*", "")
 		name = strtrim(name)
 		if not name:find("#") then
-			if server and server ~= "" and not name:find("-") then
+			if type(server) == "string" and server ~= "" and not name:find("-") then
 				server = strtrim(server):gsub("%s+", "")
 				return name .. "-" .. server
 			else
@@ -78,17 +79,20 @@ function ns.GetPlayerFullNameFromContext(contextData)
 
 	local bnetID = contextData.bnetAccountID
 	local accountInfo = contextData.accountInfo
-	if not accountInfo and bnetID and G.C_BattleNet and G.C_BattleNet.GetAccountInfoByID then
-		accountInfo = G.C_BattleNet.GetAccountInfoByID(bnetID)
+	if type(accountInfo) ~= "table" and bnetID ~= nil and G.C_BattleNet and G.C_BattleNet.GetAccountInfoByID then
+		local ok, res = pcall(G.C_BattleNet.GetAccountInfoByID, bnetID)
+		if ok and type(res) == "table" then
+			accountInfo = res
+		end
 	end
-	if accountInfo and accountInfo.gameAccountInfo then
+	if type(accountInfo) == "table" and type(accountInfo.gameAccountInfo) == "table" then
 		local gameInfo = accountInfo.gameAccountInfo
 		local charName = gameInfo.characterName
 		local realmName = gameInfo.realmName
-		if charName and charName ~= "" then
+		if type(charName) == "string" and charName ~= "" then
 			charName = strtrim(charName)
-			if not realmName or realmName == "" then
-				realmName = GetRealmName():gsub("%s+", "")
+			if type(realmName) ~= "string" or realmName == "" then
+				realmName = (GetRealmName and GetRealmName() or ""):gsub("%s+", "")
 			else
 				realmName = strtrim(realmName):gsub("%s+", "")
 			end
@@ -96,8 +100,9 @@ function ns.GetPlayerFullNameFromContext(contextData)
 		end
 	end
 
-	if contextData.memberInfo and contextData.memberInfo.name then
-		return ns.GetFullName(contextData.memberInfo.name)
+	local memberInfo = contextData.memberInfo
+	if type(memberInfo) == "table" and type(memberInfo.name) == "string" then
+		return ns.GetFullName(memberInfo.name)
 	end
 
 	return nil
@@ -114,7 +119,7 @@ if Menu and Menu.ModifyMenu then
 		end
 
 		ns.InitDB()
-		if not GroupWatchDB or not GroupWatchDB.lists then
+		if type(GroupWatchDB) ~= "table" or type(GroupWatchDB.lists) ~= "table" then
 			return
 		end
 
@@ -138,7 +143,7 @@ if Menu and Menu.ModifyMenu then
 		for _, lName in ipairs(sortedLists) do
 			local lData = GroupWatchDB.lists[lName]
 			local listSubMenu = mainSubMenu:CreateButton(string_format(L["CONTEXT_LIST"], lName))
-			if lData.players and lData.players[fullName] then
+			if type(lData) == "table" and type(lData.players) == "table" and lData.players[fullName] then
 				listSubMenu:CreateButton(L["CONTEXT_REMOVE"], function()
 					ns.RemovePlayer(fullName, lName)
 				end)

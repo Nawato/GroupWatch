@@ -16,6 +16,7 @@ local Minimap, UIParent = G.Minimap, G.UIParent
 local MenuUtil = G.MenuUtil
 local math_atan2, math_cos, math_deg, math_rad, math_sin = G.math_atan2, G.math_cos, G.math_deg, G.math_rad, G.math_sin
 local pairs = G.pairs
+local type = G.type
 local string_format = G.string_format
 
 local MinimapButton = nil
@@ -127,14 +128,16 @@ function ns.CreateMinimapButton()
 						ns.ToggleUI()
 					end)
 					rootDescription:CreateDivider()
-					for lName, lData in pairs(GroupWatchDB.lists) do
-						local count = 0
-						if lData.players then
-							for _ in pairs(lData.players) do
-								count = count + 1
+					if type(GroupWatchDB) == "table" and type(GroupWatchDB.lists) == "table" then
+						for lName, lData in pairs(GroupWatchDB.lists) do
+							local count = 0
+							if type(lData) == "table" and type(lData.players) == "table" then
+								for _ in pairs(lData.players) do
+									count = count + 1
+								end
 							end
+							rootDescription:CreateTitle(string_format(L["TOOLTIP_PLAYERS_COUNT"], lName, count))
 						end
-						rootDescription:CreateTitle(string_format(L["TOOLTIP_PLAYERS_COUNT"], lName, count))
 					end
 				end)
 			else

@@ -19,6 +19,7 @@ local StaticPopup_Show = G.StaticPopup_Show
 local string_format = G.string_format
 local table_insert, table_sort = G.table_insert, G.table_sort
 local ipairs, pairs = G.ipairs, G.pairs
+local type = G.type
 local math_max, math_min, math_abs = G.math_max, G.math_min, G.math_abs
 local tinsert = G.tinsert
 local print = G.print
@@ -143,10 +144,14 @@ local function TryMoveDraggedPlayer(targetList)
 	if dragSourceList == targetList then
 		return false -- same list: cancel cleanly
 	end
-	if not GroupWatchDB.lists[targetList] then
+	if type(GroupWatchDB) ~= "table" or type(GroupWatchDB.lists) ~= "table" then
 		return false
 	end
-	if GroupWatchDB.lists[targetList].players and GroupWatchDB.lists[targetList].players[dragSourcePlayer] then
+	if type(GroupWatchDB.lists[targetList]) ~= "table" then
+		return false
+	end
+	local targetPlayers = GroupWatchDB.lists[targetList].players
+	if type(targetPlayers) == "table" and targetPlayers[dragSourcePlayer] then
 		return false -- already a member of the target list
 	end
 	ns.MovePlayer(dragSourcePlayer, dragSourceList, targetList)
@@ -304,7 +309,7 @@ local function CreateUI()
 		ns.SetDragCursorTarget(nil)
 		f.dropTargets = {}
 
-		if not GroupWatchDB or not GroupWatchDB.lists then
+		if not GroupWatchDB or type(GroupWatchDB.lists) ~= "table" then
 			return
 		end
 
@@ -567,21 +572,25 @@ local function CreateUI()
 											local copySubMenu =
 												rootDescription:CreateButton(L["COPY_TO_LIST"] or "Copy to List")
 
-											for targetListName in pairs(GroupWatchDB.lists) do
-												if targetListName ~= lName then
-													moveSubMenu:CreateButton(targetListName, function()
-														ns.MovePlayer(pName, lName, targetListName)
-													end)
-												end
-												if
-													not (
-														GroupWatchDB.lists[targetListName].players
-														and GroupWatchDB.lists[targetListName].players[pName]
-													)
-												then
-													copySubMenu:CreateButton(targetListName, function()
-														ns.CopyPlayer(pName, lName, targetListName)
-													end)
+											if type(GroupWatchDB) == "table" and type(GroupWatchDB.lists) == "table" then
+												for targetListName in pairs(GroupWatchDB.lists) do
+													local targetData = GroupWatchDB.lists[targetListName]
+													if targetListName ~= lName then
+														moveSubMenu:CreateButton(targetListName, function()
+															ns.MovePlayer(pName, lName, targetListName)
+														end)
+													end
+													if
+														not (
+															type(targetData) == "table"
+															and type(targetData.players) == "table"
+															and targetData.players[pName]
+														)
+													then
+														copySubMenu:CreateButton(targetListName, function()
+															ns.CopyPlayer(pName, lName, targetListName)
+														end)
+													end
 												end
 											end
 										end)

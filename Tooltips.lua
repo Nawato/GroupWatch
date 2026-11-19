@@ -58,16 +58,16 @@ local function GetPlayerFullNameFromTooltip(tooltip, data)
 		end
 	end
 
-	if data and data.guid then
+	if type(data) == "table" and data.guid then
 		local ok, isPlayerGUID = pcall(function()
 			return type(data.guid) == "string" and data.guid:find("^Player%-")
 		end)
 
 		if ok and isPlayerGUID and GetPlayerInfoByGUID then
 			local okInfo, _, _, _, _, _, pName, pRealm = pcall(GetPlayerInfoByGUID, data.guid)
-			if okInfo and pName and pName ~= "" then
-				if not pRealm or pRealm == "" then
-					pRealm = GetRealmName():gsub("%s+", "")
+			if okInfo and type(pName) == "string" and pName ~= "" then
+				if type(pRealm) ~= "string" or pRealm == "" then
+					pRealm = (GetRealmName and GetRealmName() or ""):gsub("%s+", "")
 				else
 					pRealm = strtrim(pRealm):gsub("%s+", "")
 				end
@@ -92,10 +92,10 @@ end
 -- Note injection
 -- ---------------------------------------------------------------------------
 function ns.AppendNotesToTooltip(tooltip, fullName)
-	if not tooltip or not tooltip.AddLine or not fullName then
+	if not tooltip or not tooltip.AddLine or type(fullName) ~= "string" then
 		return
 	end
-	if not GroupWatchDB or not GroupWatchDB.lists then
+	if type(GroupWatchDB) ~= "table" or type(GroupWatchDB.lists) ~= "table" then
 		return
 	end
 
@@ -103,13 +103,18 @@ function ns.AppendNotesToTooltip(tooltip, fullName)
 
 	local entries = {}
 	for lName, lData in pairs(GroupWatchDB.lists) do
-		local inList = lData.players and (lData.players[fullName] or (name and lData.players[name]))
-		if inList then
-			local note = lData.notes and (lData.notes[fullName] or (name and lData.notes[name]))
-			table_insert(entries, {
-				list = lName,
-				note = (note and note ~= "") and note or nil,
-			})
+		if type(lData) == "table" and type(lData.players) == "table" then
+			local inList = lData.players[fullName] or (name and lData.players[name])
+			if inList then
+				local note
+				if type(lData.notes) == "table" then
+					note = lData.notes[fullName] or (name and lData.notes[name])
+				end
+				table_insert(entries, {
+					list = lName,
+					note = (type(note) == "string" and note ~= "") and note or nil,
+				})
+			end
 		end
 	end
 
@@ -177,11 +182,11 @@ if TooltipDataProcessor and TooltipDataProcessor.AddTooltipPostCall and Enum and
 
 	if Enum.TooltipDataType.GroupFinderSearchResult then
 		TooltipDataProcessor.AddTooltipPostCall(Enum.TooltipDataType.GroupFinderSearchResult, function(tooltip, data)
-			if not data or not data.id then
+			if type(data) ~= "table" or not data.id then
 				return
 			end
 			local ok, searchResult = pcall(C_LFGList.GetSearchResultInfo, data.id)
-			if ok and searchResult and searchResult.leaderName then
+			if ok and type(searchResult) == "table" and type(searchResult.leaderName) == "string" then
 				local fullName = ns.GetFullName(searchResult.leaderName)
 				if fullName then
 					ns.AppendNotesToTooltip(tooltip, fullName)
@@ -201,7 +206,7 @@ if LFGListUtil_SetSearchEntryTooltip then
 			return
 		end
 		local ok, searchResult = pcall(C_LFGList.GetSearchResultInfo, resultID)
-		if ok and searchResult and searchResult.leaderName then
+		if ok and type(searchResult) == "table" and type(searchResult.leaderName) == "string" then
 			local fullName = ns.GetFullName(searchResult.leaderName)
 			if fullName then
 				ns.AppendNotesToTooltip(tooltip, fullName)

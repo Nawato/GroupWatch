@@ -13,6 +13,7 @@ local ADDON_NAME, ns = ...
 local G = ns.Globals
 local L = ns.L
 local pairs, print = G.pairs, G.print
+local type = G.type
 local string_format = G.string_format
 local table_insert = G.table_insert
 
@@ -20,10 +21,10 @@ local table_insert = G.table_insert
 -- Schema
 -- ---------------------------------------------------------------------------
 function ns.InitDB()
-	if not GroupWatchDB then
+	if type(GroupWatchDB) ~= "table" then
 		GroupWatchDB = {}
 	end
-	if not GroupWatchDB.lists then
+	if type(GroupWatchDB.lists) ~= "table" then
 		local defName = L["DEFAULT_LIST_NAME"]
 		GroupWatchDB.lists = {
 			[defName] = {
@@ -31,10 +32,11 @@ function ns.InitDB()
 				sound = ns.DEFAULT_SOUND,
 				collapsed = false,
 				players = {},
+				notes = {},
 			},
 		}
 	end
-	if not GroupWatchDB.minimap then
+	if type(GroupWatchDB.minimap) ~= "table" then
 		GroupWatchDB.minimap = {
 			hide = false,
 			angle = 225,
@@ -47,8 +49,23 @@ function ns.InitDB()
 		GroupWatchDB.userSounds = {}
 	end
 
-	for _, listData in pairs(GroupWatchDB.lists) do
-		listData.notes = listData.notes or {}
+	for lName, listData in pairs(GroupWatchDB.lists) do
+		if type(listData) ~= "table" then
+			GroupWatchDB.lists[lName] = {
+				message = L["DEFAULT_GROUP_MSG"],
+				sound = ns.DEFAULT_SOUND,
+				collapsed = false,
+				players = {},
+				notes = {},
+			}
+		else
+			if type(listData.players) ~= "table" then
+				listData.players = {}
+			end
+			if type(listData.notes) ~= "table" then
+				listData.notes = {}
+			end
+		end
 	end
 
 	ns.InvalidateWatchedIndex()
@@ -74,9 +91,9 @@ function ns.GetWatchedIndex()
 	end
 
 	local index = {}
-	if GroupWatchDB and GroupWatchDB.lists then
+	if type(GroupWatchDB) == "table" and type(GroupWatchDB.lists) == "table" then
 		for lName, lData in pairs(GroupWatchDB.lists) do
-			if lData.players then
+			if type(lData) == "table" and type(lData.players) == "table" then
 				for pName in pairs(lData.players) do
 					local lists = index[pName]
 					if not lists then
@@ -107,13 +124,19 @@ function ns.AddPlayer(listName, fullName)
 
 	ns.InitDB()
 	listName = listName or ns.GetDefaultListName()
-	if not GroupWatchDB.lists[listName] then
+	local listData = GroupWatchDB.lists[listName]
+	if type(listData) ~= "table" then
 		print("|cffffaa00[GroupWatch]|r " .. string_format(L["MSG_LIST_NOT_FOUND"], listName))
 		return
 	end
+	if type(listData.players) ~= "table" then
+		listData.players = {}
+	end
 
-	GroupWatchDB.lists[listName].players[fullName] = true
-	GroupWatchDB.lists[listName].notes = GroupWatchDB.lists[listName].notes or {}
+	listData.players[fullName] = true
+	if type(listData.notes) ~= "table" then
+		listData.notes = {}
+	end
 	print("|cff00ff00[GroupWatch]|r " .. string_format(L["MSG_PLAYER_ADDED"], fullName, listName))
 	ns.InvalidateWatchedIndex()
 	ns.RefreshUI()
@@ -129,11 +152,14 @@ function ns.RemovePlayer(fullName, listName)
 	end
 
 	ns.InitDB()
+	if type(GroupWatchDB.lists) ~= "table" then
+		return
+	end
 	for lName, lData in pairs(GroupWatchDB.lists) do
-		if not listName or listName == lName then
-			if lData.players[fullName] then
+		if type(lData) == "table" and (not listName or listName == lName) then
+			if type(lData.players) == "table" and lData.players[fullName] then
 				lData.players[fullName] = nil
-				if lData.notes then
+				if type(lData.notes) == "table" then
 					lData.notes[fullName] = nil
 				end
 				print("|cffff0000[GroupWatch]|r " .. string_format(L["MSG_PLAYER_REMOVED"], fullName, lName))
@@ -149,25 +175,39 @@ end
 
 function ns.MovePlayer(pName, sourceList, targetList)
 	ns.InitDB()
-	if not GroupWatchDB.lists[sourceList] or not GroupWatchDB.lists[targetList] then
+	if type(GroupWatchDB.lists) ~= "table" then
+		return
+	end
+	local source = GroupWatchDB.lists[sourceList]
+	local target = GroupWatchDB.lists[targetList]
+	if type(source) ~= "table" or type(target) ~= "table" then
 		return
 	end
 
-	GroupWatchDB.lists[sourceList].players = GroupWatchDB.lists[sourceList].players or {}
-	GroupWatchDB.lists[targetList].players = GroupWatchDB.lists[targetList].players or {}
-	local note = GroupWatchDB.lists[sourceList].notes and GroupWatchDB.lists[sourceList].notes[pName]
+	if type(source.players) ~= "table" then
+		source.players = {}
+	end
+	if type(target.players) ~= "table" then
+		target.players = {}
+	end
+	local note
+	if type(source.notes) == "table" then
+		note = source.notes[pName]
+	end
 
 	-- Remove from source
-	GroupWatchDB.lists[sourceList].players[pName] = nil
-	if GroupWatchDB.lists[sourceList].notes then
-		GroupWatchDB.lists[sourceList].notes[pName] = nil
+	source.players[pName] = nil
+	if type(source.notes) == "table" then
+		source.notes[pName] = nil
 	end
 
 	-- Add to target
-	GroupWatchDB.lists[targetList].players[pName] = true
+	target.players[pName] = true
 	if note then
-		GroupWatchDB.lists[targetList].notes = GroupWatchDB.lists[targetList].notes or {}
-		GroupWatchDB.lists[targetList].notes[pName] = note
+		if type(target.notes) ~= "table" then
+			target.notes = {}
+		end
+		target.notes[pName] = note
 	end
 
 	ns.InvalidateWatchedIndex()
@@ -176,17 +216,30 @@ end
 
 function ns.CopyPlayer(pName, sourceList, targetList)
 	ns.InitDB()
-	if not GroupWatchDB.lists[sourceList] or not GroupWatchDB.lists[targetList] then
+	if type(GroupWatchDB.lists) ~= "table" then
+		return
+	end
+	local source = GroupWatchDB.lists[sourceList]
+	local target = GroupWatchDB.lists[targetList]
+	if type(source) ~= "table" or type(target) ~= "table" then
 		return
 	end
 
-	local note = GroupWatchDB.lists[sourceList].notes and GroupWatchDB.lists[sourceList].notes[pName]
+	local note
+	if type(source.notes) == "table" then
+		note = source.notes[pName]
+	end
 
 	-- Add to target
-	GroupWatchDB.lists[targetList].players[pName] = true
+	if type(target.players) ~= "table" then
+		target.players = {}
+	end
+	target.players[pName] = true
 	if note then
-		GroupWatchDB.lists[targetList].notes = GroupWatchDB.lists[targetList].notes or {}
-		GroupWatchDB.lists[targetList].notes[pName] = note
+		if type(target.notes) ~= "table" then
+			target.notes = {}
+		end
+		target.notes[pName] = note
 	end
 
 	ns.InvalidateWatchedIndex()
@@ -274,13 +327,24 @@ end
 -- ---------------------------------------------------------------------------
 function ns.SavePlayerNote(listName, playerName, note)
 	ns.InitDB()
+	if type(GroupWatchDB.lists) ~= "table" then
+		return
+	end
 	local listData = GroupWatchDB.lists[listName]
-	if not listData or not listData.players or not listData.players[playerName] then
+	if type(listData) ~= "table" or type(listData.players) ~= "table" then
+		return
+	end
+	if type(playerName) ~= "string" or not listData.players[playerName] then
 		return
 	end
 
-	listData.notes = listData.notes or {}
-	note = (note or ""):gsub("^%s+", ""):gsub("%s+$", "")
+	if type(listData.notes) ~= "table" then
+		listData.notes = {}
+	end
+	if type(note) ~= "string" then
+		note = ""
+	end
+	note = note:gsub("^%s+", ""):gsub("%s+$", "")
 	if note == "" then
 		listData.notes[playerName] = nil
 	else

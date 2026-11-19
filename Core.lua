@@ -115,12 +115,13 @@ ns.selectedList = nil
 -- Utilities
 -- ---------------------------------------------------------------------------
 local pairs, ipairs = ns.Globals.pairs, ns.Globals.ipairs
+local type = ns.Globals.type
 local string_format = ns.Globals.string_format
 local strsplit, strtrim = ns.Globals.strsplit, ns.Globals.strtrim
 local tostring = ns.Globals.tostring
 
 function ns.GetDefaultListName()
-	if GroupWatchDB and GroupWatchDB.lists then
+	if type(GroupWatchDB) == "table" and type(GroupWatchDB.lists) == "table" then
 		if GroupWatchDB.lists[L["DEFAULT_LIST_NAME"]] then
 			return L["DEFAULT_LIST_NAME"]
 		end
@@ -142,20 +143,20 @@ function ns.IsDefaultList(listName)
 end
 
 function ns.GetFullName(unitOrName)
-	if not unitOrName or unitOrName == "" then
+	if type(unitOrName) ~= "string" or unitOrName == "" then
 		return nil
 	end
-	unitOrName = tostring(unitOrName):gsub("%*", "")
+	unitOrName = unitOrName:gsub("%*", "")
 	local name, realm = strsplit("-", unitOrName, 2)
-	if not name or name == "" then
+	if type(name) ~= "string" or name == "" then
 		return nil
 	end
 	name = strtrim(name)
 	if name == "" then
 		return nil
 	end
-	if not realm or realm == "" then
-		realm = ns.Globals.GetRealmName():gsub("%s+", "")
+	if type(realm) ~= "string" or realm == "" then
+		realm = (ns.Globals.GetRealmName and ns.Globals.GetRealmName() or ""):gsub("%s+", "")
 	else
 		realm = strtrim(realm):gsub("%s+", "")
 	end
