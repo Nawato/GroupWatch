@@ -188,6 +188,47 @@ local function CreateDropHighlight(row)
 end
 
 -- ---------------------------------------------------------------------------
+-- Per-refresh caches (P2 perf: same behavior, less work per Refresh)
+-- ---------------------------------------------------------------------------
+
+--- Reuse a pooled widget's .data table across refreshes instead of
+--- allocating a fresh { playerName, listName } table per row per refresh.
+--- Stale fields are cleared so a recycled widget never keeps old data.
+function ns.SetWidgetData(widget, playerName, listName)
+	local d = widget.data
+	if d then
+		d.playerName = playerName
+		d.listName = listName
+		return d
+	end
+	d = { playerName = playerName, listName = listName }
+	widget.data = d
+	return d
+end
+
+--- Skin one button with a per-refresh cache instead of resolving the skin
+--- engine again. Mirrors ns.SkinButton; `cache` is { eui, elv } captured
+--- once at the top of f:Refresh(), so skinning N buttons costs one
+--- GetElvUISkins() call no matter how many rows are shown.
+local function SkinButtonCached(btn, cache)
+	if not btn then
+		return
+	end
+	local eui = cache and cache.eui
+	if eui and type(eui.Button) == "function" then
+		eui.Button(btn)
+		return
+	end
+	local elv = cache and cache.elv
+	if elv and type(elv.HandleButton) == "function" then
+		elv:HandleButton(btn)
+	end
+end
+
+-- Test hook: exercise the per-refresh cached skin path without a window.
+ns._SkinButtonCached = SkinButtonCached
+
+-- ---------------------------------------------------------------------------
 -- Refresh callback (overrides the no-op stub from Core.lua)
 -- ---------------------------------------------------------------------------
 function ns.RefreshUI()
@@ -322,6 +363,16 @@ local function CreateUI()
 		-- Cache commonly-used locale strings locally to avoid repeated table lookups
 		local L_NO_PLAYERS_IN_LIST = L["NO_PLAYERS_IN_LIST"]
 
+		-- P2 perf: resolve the skin engine once per refresh so the buttons
+		-- below cost one lookup total, not one per button; hoist the
+		-- default-list name out of the sort comparator further down.
+		local skinCache = { eui = ns.skinEUI, elv = ns.GetElvUISkins() }
+		local skinFont = skinCache.eui and skinCache.eui.Font
+		if type(skinFont) ~= "function" then
+			skinFont = nil
+		end
+		local LDefName = L["DEFAULT_LIST_NAME"]
+
 		-- Drop targets for the drag cursor: the list headers and the player
 		-- rows a dragged player can be dropped on. Rebuilt on every refresh
 		-- because the pool recycles the widgets.
@@ -334,8 +385,8 @@ local function CreateUI()
 			table_insert(listNames, lName)
 		end
 		table_sort(listNames, function(a, b)
-			local aDefault = ns.IsDefaultList(a)
-			local bDefault = ns.IsDefaultList(b)
+			local aDefault = a == "Standard" or a == "Default" or a == LDefName
+			local bDefault = b == "Standard" or b == "Default" or b == LDefName
 			if aDefault and not bDefault then
 				return true
 			end
@@ -418,7 +469,7 @@ local function CreateUI()
 			end)
 			headerRow:SetPoint("TOPLEFT", content, "TOPLEFT", 0, yOffset)
 			headerRow:Show()
-			headerRow.data = { listName = lName }
+			ns.SetWidgetData(headerRow, nil, lName)
 			table_insert(dropTargets, headerRow)
 
 			-- Collapse/Expand button [-] / [+]
@@ -435,7 +486,7 @@ local function CreateUI()
 				end)
 				return btn
 			end)
-			collapseBtn.data = { listName = lName }
+			ns.SetWidgetData(collapseBtn, nil, lName)
 			collapseBtn:SetParent(headerRow)
 			collapseBtn:SetPoint("LEFT", headerRow, "LEFT", 0, 0)
 			collapseBtn:Show()
@@ -448,7 +499,7 @@ local function CreateUI()
 			end
 			collapseText:SetText(lData.collapsed and "|cffffd100[+]|r" or "|cffffd100[-]|r")
 
-			ns.SkinButton(collapseBtn)
+			SkinButtonCached(collapseBtn, skinCache)
 
 			-- List title — white when selected, dim gold otherwise
 			local headerText = headerRow.headerText
@@ -462,8 +513,8 @@ local function CreateUI()
 			else
 				headerText:SetText("|cffaaaaaa" .. lName .. "|r")
 			end
-			if ns.skinEUI and type(ns.skinEUI.Font) == "function" then
-				ns.skinEUI.Font(headerText)
+			if skinFont then
+				skinFont(headerText)
 			end
 
 			-- Sound dropdown button after title
@@ -482,12 +533,12 @@ local function CreateUI()
 				end)
 				return btn
 			end)
-			soundBtn.data = { listName = lName }
+			ns.SetWidgetData(soundBtn, nil, lName)
 			soundBtn:SetParent(headerRow)
 			soundBtn:SetPoint("LEFT", headerText, "RIGHT", 8, 0)
 			soundBtn:SetText(ns.GetSoundButtonLabel(lData.sound))
 			soundBtn:Show()
-			ns.SkinButton(soundBtn)
+			SkinButtonCached(soundBtn, skinCache)
 
 			-- (+) Button to add player to list
 			local addPlayerBtn = ns.GetWidget("addPlayerBtn", function()
@@ -503,12 +554,12 @@ local function CreateUI()
 				end)
 				return btn
 			end)
-			addPlayerBtn.data = { listName = lName }
+			ns.SetWidgetData(addPlayerBtn, nil, lName)
 			addPlayerBtn:SetParent(headerRow)
 			addPlayerBtn:SetPoint("TOP", headerRow, "TOP", 0, 0)
 			addPlayerBtn:SetPoint("RIGHT", headerRow, "RIGHT", 0, 0)
 			addPlayerBtn:Show()
-			ns.SkinButton(addPlayerBtn)
+			SkinButtonCached(addPlayerBtn, skinCache)
 
 			yOffset = yOffset - 26
 
@@ -627,7 +678,7 @@ local function CreateUI()
 							end)
 							return btn
 						end)
-						row.data = { playerName = pName, listName = lName }
+						ns.SetWidgetData(row, pName, lName)
 						row:SetPoint("TOPLEFT", content, "TOPLEFT", 20, yOffset)
 						row:Show()
 						table_insert(dropTargets, row)
@@ -636,8 +687,8 @@ local function CreateUI()
 						if not lineText then
 							lineText = row:CreateFontString(nil, "OVERLAY", "GameFontHighlight")
 							lineText:SetPoint("LEFT", row, "LEFT", 0, 0)
-							if ns.skinEUI and type(ns.skinEUI.Font) == "function" then
-								ns.skinEUI.Font(lineText)
+							if skinFont then
+								skinFont(lineText)
 							end
 						end
 						row.lineText = lineText
@@ -659,11 +710,11 @@ local function CreateUI()
 							end)
 							return btn
 						end)
-						del.data = { playerName = pName, listName = lName }
+						ns.SetWidgetData(del, pName, lName)
 						del:SetPoint("RIGHT", addPlayerBtn, "RIGHT", 0, 0)
 						del:SetPoint("TOP", row, "TOP", 0, 0)
 						del:Show()
-						ns.SkinButton(del)
+						SkinButtonCached(del, skinCache)
 
 						local noteBtn = ns.GetWidget("noteBtn", function()
 							local btn = CreateFrame("Button", nil, content, "UIPanelButtonTemplate")
@@ -695,10 +746,10 @@ local function CreateUI()
 							end)
 							return btn
 						end)
-						noteBtn.data = { playerName = pName, listName = lName }
+						ns.SetWidgetData(noteBtn, pName, lName)
 						noteBtn:SetPoint("RIGHT", del, "LEFT", -4, 0)
 						noteBtn:Show()
-						ns.SkinButton(noteBtn)
+						SkinButtonCached(noteBtn, skinCache)
 
 						yOffset = yOffset - 24
 					end
@@ -710,8 +761,8 @@ local function CreateUI()
 					-- next list, so only the last list would ever show it.
 					local empty = ns.GetWidget("emptyText", function()
 						local fs = content:CreateFontString(nil, "OVERLAY", "GameFontDisable")
-						if ns.skinEUI and type(ns.skinEUI.Font) == "function" then
-							ns.skinEUI.Font(fs)
+						if skinFont then
+							skinFont(fs)
 						end
 						return fs
 					end)
@@ -732,8 +783,8 @@ local function CreateUI()
 
 		-- The layout changed under the pointer (a move refreshes the list), so
 		-- the drop target under it is picked again right away instead of on
-		-- the next frame.
-		ns.RefreshDragCursorTarget()
+		-- the next frame: forced, bypassing the hit-test throttle.
+		ns.RefreshDragCursorTarget(true)
 	end
 
 	-- Closing the window mid-drag (Escape) must take the drag cursor with it.

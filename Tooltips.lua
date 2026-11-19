@@ -100,7 +100,10 @@ function ns.AppendNotesToTooltip(tooltip, fullName)
 
 	local name = strsplit("-", fullName, 2)
 
-	local entries = {}
+	-- Built lazily so a hover over an unwatched player costs no table
+	-- allocation and no sort: the common miss path returns below with
+	-- nothing created and nothing sorted.
+	local entries = nil
 	for lName, lData in pairs(GroupWatchDB.lists) do
 		if type(lData) == "table" and type(lData.players) == "table" then
 			local inList = lData.players[fullName] or (name and lData.players[name])
@@ -108,6 +111,9 @@ function ns.AppendNotesToTooltip(tooltip, fullName)
 				local note
 				if type(lData.notes) == "table" then
 					note = lData.notes[fullName] or (name and lData.notes[name])
+				end
+				if not entries then
+					entries = {}
 				end
 				table_insert(entries, {
 					list = lName,
@@ -117,19 +123,22 @@ function ns.AppendNotesToTooltip(tooltip, fullName)
 		end
 	end
 
-	if #entries == 0 then
+	if not entries then
 		return
 	end
 
-	table_sort(entries, function(a, b)
-		if ns.IsDefaultList(a.list) and not ns.IsDefaultList(b.list) then
-			return true
-		end
-		if not ns.IsDefaultList(a.list) and ns.IsDefaultList(b.list) then
-			return false
-		end
-		return a.list < b.list
-	end)
+	-- A single entry is already ordered; only sort two or more.
+	if #entries > 1 then
+		table_sort(entries, function(a, b)
+			if ns.IsDefaultList(a.list) and not ns.IsDefaultList(b.list) then
+				return true
+			end
+			if not ns.IsDefaultList(a.list) and ns.IsDefaultList(b.list) then
+				return false
+			end
+			return a.list < b.list
+		end)
+	end
 
 	local noteHeader = L["NOTE_HEADER"] or "Note"
 

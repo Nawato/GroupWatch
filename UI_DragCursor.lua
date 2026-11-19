@@ -40,6 +40,12 @@ local dragAlreadyIn = {}
 local dragFrames = 0
 local dragR, dragG, dragB = NEUTRAL_R, NEUTRAL_G, NEUTRAL_B
 
+-- P2 perf: the per-frame hit test runs every 2nd OnUpdate instead of every
+-- frame. The chip still follows the pointer every frame and drag-over
+-- events still highlight instantly; the skipped tick catches up on the next
+-- frame, so the highlight can lag by at most one frame and never sticks.
+local dragThrottleTick = 0
+
 -- ---------------------------------------------------------------------------
 -- Class color
 -- ---------------------------------------------------------------------------
@@ -224,7 +230,7 @@ function ns.SetDragCursorTarget(row)
 end
 
 --- Called by the rows when a drag passes over them: instant feedback, the
---- per-frame hit test keeps the highlight in sync from there on.
+--- throttled hit test keeps the highlight in sync from there on.
 --- A row that is not a valid target is not highlighted.
 function ns.NotifyDragOverRow(row)
 	if row and ns.IsValidDragTarget(row.data and row.data.listName) then
@@ -240,14 +246,27 @@ end
 --- Re-pick the drop target under the pointer.
 --- Called after the list layout changed, so the highlight follows the
 --- pointer without waiting for the next frame.
-function ns.RefreshDragCursorTarget()
+--- `force` bypasses the hit-test throttle (used after layout changes);
+--- the per-frame OnUpdate path stays throttled.
+function ns.RefreshDragCursorTarget(force)
 	if not ns.IsDragCursorActive() then
 		return
+	end
+	if not force then
+		dragThrottleTick = dragThrottleTick + 1
+		if (dragThrottleTick % 2) == 1 then
+			return -- skipped tick; the next one catches up
+		end
 	end
 	local target = ns.GetDragTargetAtCursor()
 	if target ~= highlightedRow then
 		ns.SetDragCursorTarget(target)
 	end
+end
+
+--- Reset the hit-test throttle (tests use this for deterministic asserts).
+function ns._ResetDragThrottle()
+	dragThrottleTick = 0
 end
 
 -- ---------------------------------------------------------------------------
@@ -356,6 +375,7 @@ function ns.ShowDragCursor(playerName, sourceList)
 	dragSourcePlayer = playerName
 	dragSourceList = sourceList
 	dragFrames = 0
+	dragThrottleTick = 0
 	ns.SetDragCursorTarget(nil)
 
 	-- The lists the character is already in when the drag starts. A move
@@ -386,6 +406,7 @@ function ns.HideDragCursor()
 	dragSourceList = nil
 	dragAlreadyIn = {}
 	dragFrames = 0
+	dragThrottleTick = 0
 	if cursorFrame then
 		cursorFrame:Hide()
 	end
