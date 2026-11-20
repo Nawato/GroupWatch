@@ -211,17 +211,33 @@ end
 --- once at the top of f:Refresh(), so skinning N buttons costs one
 --- GetElvUISkins() call no matter how many rows are shown.
 local function SkinButtonCached(btn, cache)
-	if not btn then
+	if type(btn) ~= "table" then
 		return
 	end
 	local eui = cache and cache.eui
-	if eui and type(eui.Button) == "function" then
-		eui.Button(btn)
-		return
+	-- A disabled engine must fall back even when the cache holds the raw
+	-- object (e.g. pooled rows); mirrors ns.GetActiveEUI.
+	if type(eui) == "table" and type(eui.IsEnabled) == "function" then
+		local okEn, enabled = pcall(eui.IsEnabled, eui)
+		if okEn and enabled == false then
+			eui = nil
+		end
+	end
+	if type(eui) == "table" and type(eui.Button) == "function" then
+		local ok = pcall(eui.Button, btn)
+		if ok then
+			return
+		end
 	end
 	local elv = cache and cache.elv
-	if elv and type(elv.HandleButton) == "function" then
-		elv:HandleButton(btn)
+	if type(elv) == "table" and type(elv.HandleButton) == "function" then
+		local ok = pcall(elv.HandleButton, elv, btn)
+		if ok then
+			return
+		end
+	end
+	if type(ns.StyleFallbackButton) == "function" then
+		pcall(ns.StyleFallbackButton, btn)
 	end
 end
 
@@ -257,15 +273,9 @@ local function CreateUI()
 	f:SetScript("OnDragStop", f.StopMovingOrSizing)
 	f:SetClampedToScreen(true)
 
-	if not (ns.skinEUI or ns.IsElvUIPresent()) then
-		f:SetBackdrop({
-			bgFile = "Interface\\DialogFrame\\UI-DialogBox-Background",
-			edgeFile = "Interface\\DialogFrame\\UI-DialogBox-Border",
-			tile = true,
-			tileSize = 32,
-			edgeSize = 32,
-			insets = { left = 8, right = 8, top = 8, bottom = 8 },
-		})
+	-- Base look: shared fallback theme (EUI/ElvUI upgrade it in SkinWindow).
+	if type(ns.ApplyFallbackFrame) == "function" then
+		ns.ApplyFallbackFrame(f)
 	end
 
 	-- Title bar (placed on the header strip by ns.SkinWindow)
@@ -279,23 +289,52 @@ local function CreateUI()
 	closeBtn:SetPoint("TOPRIGHT", f, "TOPRIGHT", -5, -5)
 	f.closeBtn = closeBtn
 
-	-- ScrollFrame for list area
-	local scrollFrame = CreateFrame("ScrollFrame", "GroupWatchScrollFrame", f)
+	-- ScrollFrame for list area with a real scrollbar (wheel still works).
+	local scrollFrame = CreateFrame("ScrollFrame", "GroupWatchScrollFrame", f, "UIPanelScrollFrameTemplate")
 	scrollFrame:SetPoint("TOPLEFT", f, "TOPLEFT", 15, -40)
-	scrollFrame:SetPoint("BOTTOMRIGHT", f, "BOTTOMRIGHT", -15, 65)
+	scrollFrame:SetPoint("BOTTOMRIGHT", f, "BOTTOMRIGHT", -40, 65)
 
 	scrollFrame:EnableMouseWheel(true)
 	scrollFrame:SetScript("OnMouseWheel", function(self, delta)
 		local current = self:GetVerticalScroll()
 		local max = self:GetVerticalScrollRange()
 		self:SetVerticalScroll(math_max(0, math_min(max, current - delta * 20)))
+		local sb = self.ScrollBar
+		if type(sb) == "table" and type(sb.SetValue) == "function" then
+			pcall(sb.SetValue, sb, self:GetVerticalScroll())
+		end
 	end)
 
+	-- The template provides ScrollBar on live clients; test/restricted
+	-- contexts get a manual slider so f.scrollBar is never nil.
+	local scrollBar = scrollFrame.ScrollBar
+	if type(scrollBar) ~= "table" and type(_G) == "table" then
+		local globalBar = rawget(_G, "GroupWatchScrollFrameScrollBar")
+		if type(globalBar) == "table" then
+			scrollBar = globalBar
+			scrollFrame.ScrollBar = scrollBar
+		end
+	end
+	if type(scrollBar) ~= "table" then
+		local okBar, newBar = pcall(CreateFrame, "Slider", nil, scrollFrame, "UIPanelScrollBarTemplate")
+		if okBar and type(newBar) == "table" then
+			if type(newBar.SetPoint) == "function" then
+				pcall(newBar.SetPoint, newBar, "TOPLEFT", scrollFrame, "TOPRIGHT", -20, -16)
+				pcall(newBar.SetPoint, newBar, "BOTTOMLEFT", scrollFrame, "BOTTOMRIGHT", -20, 16)
+			end
+			if type(newBar.SetWidth) == "function" then
+				pcall(newBar.SetWidth, newBar, 16)
+			end
+			scrollFrame.ScrollBar = newBar
+			scrollBar = newBar
+		end
+	end
+
 	f.scrollFrame = scrollFrame
-	f.scrollBar = nil
+	f.scrollBar = scrollBar
 
 	local content = CreateFrame("Frame", nil, scrollFrame)
-	content:SetSize(370, 100)
+	content:SetSize(345, 100)
 	scrollFrame:SetScrollChild(content)
 
 	f.content = content
@@ -366,10 +405,33 @@ local function CreateUI()
 		-- P2 perf: resolve the skin engine once per refresh so the buttons
 		-- below cost one lookup total, not one per button; hoist the
 		-- default-list name out of the sort comparator further down.
-		local skinCache = { eui = ns.skinEUI, elv = ns.GetElvUISkins() }
+		-- Use the active-skin resolver so IsEnabled()==false falls back
+		-- instead of skinning pooled rows with a disabled engine.
+		local activeEUI = nil
+		if type(ns.GetActiveEUI) == "function" then
+			local okActive, resolved = pcall(ns.GetActiveEUI)
+			if okActive and type(resolved) == "table" then
+				activeEUI = resolved
+			end
+		end
+		local skinCache = { eui = activeEUI, elv = ns.GetElvUISkins() }
 		local skinFont = skinCache.eui and skinCache.eui.Font
 		if type(skinFont) ~= "function" then
 			skinFont = nil
+		end
+		local function SkinText(fs)
+			if type(fs) ~= "table" then
+				return
+			end
+			if skinFont then
+				local ok = pcall(skinFont, fs)
+				if ok then
+					return
+				end
+			end
+			if type(ns.SkinFont) == "function" then
+				pcall(ns.SkinFont, fs, false)
+			end
 		end
 		local LDefName = L["DEFAULT_LIST_NAME"]
 
@@ -405,7 +467,7 @@ local function CreateUI()
 			-- Header container
 			local headerRow = ns.GetWidget("headerRow", function()
 				local btn = CreateFrame("Button", nil, content)
-				btn:SetSize(365, 22)
+				btn:SetSize(340, 22)
 				btn:RegisterForClicks("LeftButtonUp", "RightButtonUp")
 				CreateDropHighlight(btn)
 				btn:SetScript("OnClick", function(selfBtn, button)
@@ -513,9 +575,7 @@ local function CreateUI()
 			else
 				headerText:SetText("|cffaaaaaa" .. lName .. "|r")
 			end
-			if skinFont then
-				skinFont(headerText)
-			end
+			SkinText(headerText)
 
 			-- Sound dropdown button after title
 			local soundBtn = ns.GetWidget("soundBtn", function()
@@ -687,9 +747,7 @@ local function CreateUI()
 						if not lineText then
 							lineText = row:CreateFontString(nil, "OVERLAY", "GameFontHighlight")
 							lineText:SetPoint("LEFT", row, "LEFT", 0, 0)
-							if skinFont then
-								skinFont(lineText)
-							end
+							SkinText(lineText)
 						end
 						row.lineText = lineText
 						if ns.selectedPlayer == pName then
@@ -761,9 +819,7 @@ local function CreateUI()
 					-- next list, so only the last list would ever show it.
 					local empty = ns.GetWidget("emptyText", function()
 						local fs = content:CreateFontString(nil, "OVERLAY", "GameFontDisable")
-						if skinFont then
-							skinFont(fs)
-						end
+						SkinText(fs)
 						return fs
 					end)
 					empty:SetPoint("TOPLEFT", content, "TOPLEFT", 20, yOffset)
@@ -780,6 +836,12 @@ local function CreateUI()
 		scrollFrame:SetVerticalScroll(
 			math_min(scrollOffset, math_max(0, content:GetHeight() - scrollFrame:GetHeight()))
 		)
+		-- Mirror the wheel handler: keep the slider value in sync after
+		-- the restore so the thumb does not desync.
+		local sb = scrollFrame.ScrollBar
+		if type(sb) == "table" and type(sb.SetValue) == "function" then
+			pcall(sb.SetValue, sb, scrollFrame:GetVerticalScroll())
+		end
 
 		-- The layout changed under the pointer (a move refreshes the list), so
 		-- the drop target under it is picked again right away instead of on

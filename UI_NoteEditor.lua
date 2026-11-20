@@ -45,15 +45,9 @@ function ns.ShowNoteEditor(playerName, listName, existingNote)
 		frame:SetFrameStrata("DIALOG")
 		frame:SetFrameLevel(100)
 
-		if not (ns.skinEUI or ns.IsElvUIPresent()) then
-			frame:SetBackdrop({
-				bgFile = "Interface\\DialogFrame\\UI-DialogBox-Background",
-				edgeFile = "Interface\\DialogFrame\\UI-DialogBox-Border",
-				tile = true,
-				tileSize = 32,
-				edgeSize = 32,
-				insets = { left = 8, right = 8, top = 8, bottom = 8 },
-			})
+		-- Base look: shared fallback theme (SkinWindow upgrades to EUI).
+		if type(ns.ApplyFallbackFrame) == "function" then
+			ns.ApplyFallbackFrame(frame)
 		end
 
 		-- Title (placed on the header strip by ns.SkinWindow)
@@ -116,6 +110,12 @@ function ns.ShowNoteEditor(playerName, listName, existingNote)
 		scrollFrame:SetScrollChild(editBox)
 		frame.scrollFrame = scrollFrame
 		frame.editBox = editBox
+		-- House input box (padInput keeps text clear of the border).
+		if type(ns.SkinEditBox) == "function" then
+			ns.SkinEditBox(editBox, { padInput = true })
+		elseif type(ns.SkinFont) == "function" then
+			ns.SkinFont(editBox, false)
+		end
 
 		-- Save button
 		local saveBtn = CreateFrame("Button", nil, frame, "UIPanelButtonTemplate")

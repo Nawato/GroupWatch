@@ -323,14 +323,13 @@ local function CreateCursorFrame()
 	f:EnableMouse(false)
 	f:SetHeight(CHIP_HEIGHT)
 
-	f:SetBackdrop({
-		bgFile = "Interface\\Buttons\\WHITE8X8",
-		edgeFile = "Interface\\Buttons\\WHITE8X8",
-		tile = false,
-		edgeSize = 1,
-		insets = { left = 1, right = 1, top = 1, bottom = 1 },
-	})
-	f:SetBackdropColor(0, 0, 0, 0.78)
+	-- Shared fallback theme (EUI Panel when present, same fill otherwise).
+	if type(ns.ApplyFallbackFrame) == "function" then
+		ns.ApplyFallbackFrame(f)
+	end
+	if type(ns.SkinPanel) == "function" then
+		pcall(ns.SkinPanel, f)
+	end
 
 	-- Class-colored accent bar on the left edge
 	local accent = f:CreateTexture(nil, "ARTWORK")
@@ -345,6 +344,9 @@ local function CreateCursorFrame()
 	text:SetJustifyH("LEFT")
 	text:SetJustifyV("MIDDLE")
 	f.text = text
+	if type(ns.SkinFont) == "function" then
+		pcall(ns.SkinFont, text, false)
+	end
 
 	f:SetScript("OnUpdate", UpdateCursor)
 
@@ -392,7 +394,12 @@ function ns.ShowDragCursor(playerName, sourceList)
 
 	local r, g, b = ns.GetClassColorForName(playerName)
 	dragR, dragG, dragB = r, g, b
-	cursorFrame:SetBackdropBorderColor(r, g, b, 0.9)
+	if type(cursorFrame.SetBackdropBorderColor) == "function" then
+		pcall(cursorFrame.SetBackdropBorderColor, cursorFrame, r, g, b, 0.9)
+	end
+	if type(ns.SetFallbackBorderColor) == "function" then
+		pcall(ns.SetFallbackBorderColor, cursorFrame, r, g, b, 0.9)
+	end
 	cursorFrame.accent:SetColorTexture(r, g, b, 1)
 	cursorFrame.text:SetText(playerName or "")
 	cursorFrame:SetWidth(ACCENT_WIDTH + CHIP_PADDING * 2 + cursorFrame.text:GetStringWidth())

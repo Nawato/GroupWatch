@@ -89,7 +89,10 @@ function ns.CreateMinimapButton()
 	icon:SetPoint("CENTER", 0, 0)
 	-- Set custom addon icon path
 	icon:SetTexture("Interface\\AddOns\\GroupWatch\\Media\\icon_gw_wei.png")
-	icon:SetTexCoord(0, 1, 0, 1)
+	-- Inset crop keeps the round icon inside the thin border.
+	if type(icon.SetTexCoord) == "function" then
+		pcall(icon.SetTexCoord, icon, 0.08, 0.92, 0.08, 0.92)
+	end
 
 	local overlay = btn:CreateTexture(nil, "OVERLAY")
 	overlay:SetTexture("Interface\\Minimap\\MiniMap-TrackingBorder")
@@ -105,6 +108,12 @@ function ns.CreateMinimapButton()
 	btn.icon = icon
 	btn.overlay = overlay
 	btn.highlight = highlight
+
+	-- Thin 1px border (fallback theme); standalone frame keeps working
+	-- without any external library.
+	if type(ns.AddFallbackBorder) == "function" then
+		pcall(ns.AddFallbackBorder, btn)
+	end
 
 	btn:SetScript("OnEnter", function(self)
 		GameTooltip:SetOwner(self, "ANCHOR_LEFT")
@@ -170,21 +179,52 @@ function ns.CreateMinimapButton()
 end
 
 function ns.RegisterLDB()
-	local ldb = LibStub and LibStub("LibDataBroker-1.1", true)
-	if ldb and not ldb:GetDataObjectByName("GroupWatch") then
-		ldb:NewDataObject("GroupWatch", {
-			type = "launcher",
-			text = "GroupWatch",
-			icon = "Interface\\AddOns\\GroupWatch\\Media\\icon_gw_wei.png",
-			OnClick = function(_, mouseBtn)
-				if mouseBtn == "LeftButton" then
-					ns.ToggleUI()
-				end
-			end,
-			OnTooltipShow = function(tooltip)
-				tooltip:AddLine("|cff00ccffGroupWatch|r")
-				tooltip:AddLine(L["TOOLTIP_LEFT_CLICK"], 1, 1, 1)
-			end,
-		})
+	local stub = LibStub
+	local ldb = nil
+	if stub ~= nil then
+		local okStub, lib = pcall(stub, "LibDataBroker-1.1", true)
+		if okStub then
+			ldb = lib
+		end
+	end
+	-- Optional LibDBIcon path: only when LibStub (and the icon library)
+	-- are present. Never required; the standalone button always works.
+	local dbIcon = nil
+	if stub ~= nil then
+		local okIcon, libIcon = pcall(stub, "LibDBIcon-1.0", true)
+		if okIcon and type(libIcon) == "table" then
+			dbIcon = libIcon
+		end
+	end
+	if type(ldb) == "table" and type(ldb.GetDataObjectByName) == "function" and type(ldb.NewDataObject) == "function" then
+		local exists = nil
+		local okGet, res = pcall(ldb.GetDataObjectByName, ldb, "GroupWatch")
+		if okGet then
+			exists = res
+		end
+		if not exists then
+			pcall(ldb.NewDataObject, ldb, "GroupWatch", {
+				type = "launcher",
+				text = "GroupWatch",
+				icon = "Interface\\AddOns\\GroupWatch\\Media\\icon_gw_wei.png",
+				OnClick = function(_, mouseBtn)
+					if mouseBtn == "LeftButton" then
+						ns.ToggleUI()
+					end
+				end,
+				OnTooltipShow = function(tooltip)
+					tooltip:AddLine("|cff00ccffGroupWatch|r")
+					tooltip:AddLine(L["TOOLTIP_LEFT_CLICK"], 1, 1, 1)
+				end,
+			})
+		end
+	end
+	if type(dbIcon) == "table" and type(dbIcon.Register) == "function" and type(ldb) == "table" and type(ldb.GetDataObjectByName) == "function" then
+		local dob = nil
+		local okDob, resDob = pcall(ldb.GetDataObjectByName, ldb, "GroupWatch")
+		if okDob then
+			dob = resDob
+		end
+		pcall(dbIcon.Register, dbIcon, "GroupWatch", dob, GroupWatchDB and GroupWatchDB.minimap)
 	end
 end
