@@ -1,0 +1,25 @@
+name: Release
+
+on:
+  push:
+    tags: ["v*"]
+
+permissions:
+  contents: write
+
+jobs:
+  release:
+    runs-on: ubuntu-latest
+    env:
+      # Create the API token at https://authors.curseforge.com/#/settings/api-tokens
+      # and add it as a repository secret named CF_API_KEY.
+      CF_API_KEY: ${{ secrets.CF_API_KEY }}
+      GITHUB_OAUTH: ${{ secrets.GITHUB_TOKEN }}
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          fetch-depth: 0
+
+      # The CurseForge upload uses the project id from the TOC
+      # (## X-Curse-Project-ID). Add it once the project exists.
+      - uses: BigWigsMods/packager@v2

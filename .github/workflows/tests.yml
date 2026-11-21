@@ -1,0 +1,27 @@
+name: Tests
+
+on:
+  push:
+    branches: ["main"]
+  pull_request:
+
+jobs:
+  lua:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Install Lua 5.1
+        run: sudo apt-get update && sudo apt-get install -y lua5.1
+
+      - name: Syntax check
+        run: |
+          luac5.1 -p *.lua tests/*.lua
+
+      - name: Run test suites
+        run: |
+          lua5.1 tests/run.lua
+          lua5.1 tests/midnight.lua
+          lua5.1 tests/perf.lua
+          lua5.1 tests/skin.lua
+          lua5.1 tests/auto.lua

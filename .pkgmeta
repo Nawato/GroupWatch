@@ -1,0 +1,14 @@
+package-as: GroupWatch
+
+ignore:
+  - .github
+  - .vscode
+  - tests
+  - dist
+  - CODE_REVIEW.md
+  - CHANGELOG.md
+  - README.md
+  - package.sh
+  - .gitignore
+
+enable-nolib-creation: no

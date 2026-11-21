@@ -8,7 +8,8 @@
 
 * 📜 **Custom Player Lists**: Create, rename, and manage multiple customized lists with custom alert messages and sound effects.
 * 📝 **Multiline Notes Editor**: Add detailed, multiline notes for any player on your lists.
-* 🔎 **Group Finder & LFG Tooltip Integration**: Hover over Premade Group listings in LFG to instantly see if the group leader is on one of your lists and view your saved notes.
+* 🔎 **Group Finder & LFG Tooltip Integration**: Hover over Premade Group listings in LFG to instantly see if the group leader is on one of your lists and view your saved notes. Applicants who are on your lists are tagged in the applicant viewer, with their notes in the tooltip, role-fit information, and manual Invite/Decline buttons.
+* ⚡ **Per-List Auto Actions**: Optionally auto accept or auto decline direct party invites from players on a list, with chat feedback and the list sound.
 * 💬 **Context Menu Support**: Right-click players in chat, friends lists, guild rosters, or target frames to instantly add or remove them from your GroupWatch lists.
 * 🔔 **Group Alerts**: Receive chat notifications and audio alerts when a watched player joins your party or raid.
 * 🎨 **UI Skinning Support**: Automatically skins itself to match **EllesmereUI** or **ElvUI** if installed, while keeping a native WoW aesthetic otherwise.
@@ -48,7 +49,13 @@ Access commands using `/gw` or `/groupwatch`:
 * Right-click any player's name in chat, target frame, guild roster, or friends list.
 * Hover over the **GroupWatch** context menu entry to instantly add or remove them from your active lists.
 
-### 4. Custom Sound Files
+### 4. Auto Actions
+* Right-click a list header and open **Auto Actions**.
+* **Auto Accept** accepts direct party invites from players on that list; **Auto Decline** declines them. If a player is on lists with conflicting settings, decline wins.
+* While the Group Finder applicant viewer is open, matching applicants are tagged, their tooltip shows your notes, and the panel lists their role fit with manual **Invite** / **Decline** buttons.
+* Blizzard does not allow addons to accept or decline Group Finder applicants automatically — the manual buttons are the supported path.
+
+### 5. Custom Sound Files
 * The addon ships with two sounds of its own — **Bruh** and **Oof** — which are always in the sound list of every list.
 * Drop your own `.ogg` or `.mp3` files into the `Sounds` folder inside the GroupWatch addon directory. Any file name works — `BossAlert.ogg` shows up as **BossAlert**.
 * **Restart the game completely** afterwards — the client only indexes new media files at startup, so a `/reload` is not enough.
@@ -63,6 +70,14 @@ Access commands using `/gw` or `/groupwatch`:
 2. Extract the `GroupWatch` folder into your World of Warcraft directory:
    `World of Warcraft\_retail_\Interface\AddOns\`
 3. Restart your game or load into the world and type `/reload`.
+
+---
+
+## 🧪 Development
+
+* Run the Lua test suites: `lua5.1 tests/run.lua`, `lua5.1 tests/midnight.lua`, `lua5.1 tests/perf.lua`, `lua5.1 tests/skin.lua`, `lua5.1 tests/auto.lua`.
+* Build a release archive with `./package.sh`; the zip is written to `dist/`.
+* Pushing a `v*` tag runs the release workflow and publishes the archive.
 
 ---
 

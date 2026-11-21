@@ -2,12 +2,17 @@
 ## Interface-Camelot: 16001
 ## AllowLoadGameType: standard, camelot
 ## Title: GroupWatch
-## Notes: Monitors players in groups based on customizable lists, sounds, and notifications.
-## Notes-deDE: Überwacht Spieler in Gruppen basierend auf anpassbaren Listen, Sounds und Nachrichten.
-## Author: DeinName
-## Version: 2.0
+## Notes: Track players across custom lists with notes, alerts, Group Finder integration and invite handling.
+## Notes-deDE: Verfolgt Spieler über eigene Listen mit Notizen, Alarmen, Gruppensuche-Integration und Einladungsverwaltung.
+## Author: nawato
+## Version: 0.6.0
 ## SavedVariables: GroupWatchDB
 ## OptionalDeps: EllesmereUI, ElvUI
+## X-Website: https://github.com/Nawato/GroupWatch
+## X-License: GPL-3.0
+## IconTexture: Interface\AddOns\GroupWatch\Media\icon_gw_wei.png
+# Add the CurseForge project ID here once the project exists:
+# ## X-Curse-Project-ID: 000000
 
 Locales.lua
 Core.lua
