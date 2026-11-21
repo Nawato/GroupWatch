@@ -20,6 +20,8 @@ UI_NoteEditor.lua
 UI_MainWindow.lua
 MinimapButton.lua
 Detection.lua
+AutoActions.lua
+LFGApplicants.lua
 ContextMenu.lua
 Tooltips.lua
 SlashCommands.lua

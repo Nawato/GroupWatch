@@ -181,6 +181,54 @@ local function OnTooltipSetUnit(tooltip, data)
 end
 
 -- ---------------------------------------------------------------------------
+-- LFG search results (secret-value hardened)
+-- ---------------------------------------------------------------------------
+-- On Midnight the search result table and its leaderName can be secret while
+-- chat messaging is locked down. Never index a secret table/string: show a
+-- generic restricted line instead of throwing or leaking data.
+function ns.AppendLFGSearchResultTooltip(tooltip, resultID)
+	if type(tooltip) ~= "table" then
+		return
+	end
+
+	if not ns.IsPlainValue(resultID) then
+		ns.AppendRestrictedTooltipLine(tooltip)
+		return
+	end
+	if type(resultID) ~= "number" then
+		return
+	end
+
+	if type(C_LFGList) ~= "table" or type(C_LFGList.GetSearchResultInfo) ~= "function" then
+		return
+	end
+	local ok, searchResult = pcall(C_LFGList.GetSearchResultInfo, resultID)
+	if not ok then
+		ns.AppendRestrictedTooltipLine(tooltip)
+		return
+	end
+	if type(searchResult) ~= "table" then
+		return
+	end
+	if not ns.CanAccessTable(searchResult) then
+		ns.AppendRestrictedTooltipLine(tooltip)
+		return
+	end
+
+	local leaderName = searchResult.leaderName
+	if not ns.IsPlainValue(leaderName) then
+		ns.AppendRestrictedTooltipLine(tooltip)
+		return
+	end
+	if type(leaderName) == "string" and leaderName ~= "" then
+		local fullName = ns.GetFullName(leaderName)
+		if fullName then
+			ns.AppendNotesToTooltip(tooltip, fullName)
+		end
+	end
+end
+
+-- ---------------------------------------------------------------------------
 -- Hook registration
 -- ---------------------------------------------------------------------------
 if TooltipDataProcessor and TooltipDataProcessor.AddTooltipPostCall and Enum and Enum.TooltipDataType then
@@ -190,16 +238,14 @@ if TooltipDataProcessor and TooltipDataProcessor.AddTooltipPostCall and Enum and
 
 	if Enum.TooltipDataType.GroupFinderSearchResult then
 		TooltipDataProcessor.AddTooltipPostCall(Enum.TooltipDataType.GroupFinderSearchResult, function(tooltip, data)
-			if type(data) ~= "table" or not data.id then
+			if type(data) ~= "table" then
 				return
 			end
-			local ok, searchResult = pcall(C_LFGList.GetSearchResultInfo, data.id)
-			if ok and type(searchResult) == "table" and type(searchResult.leaderName) == "string" then
-				local fullName = ns.GetFullName(searchResult.leaderName)
-				if fullName then
-					ns.AppendNotesToTooltip(tooltip, fullName)
-				end
+			if not ns.CanAccessTable(data) then
+				ns.AppendRestrictedTooltipLine(tooltip)
+				return
 			end
+			ns.AppendLFGSearchResultTooltip(tooltip, data.id)
 		end)
 	end
 elseif GameTooltip and GameTooltip.HookScript then
@@ -213,12 +259,6 @@ if LFGListUtil_SetSearchEntryTooltip then
 		if not resultID then
 			return
 		end
-		local ok, searchResult = pcall(C_LFGList.GetSearchResultInfo, resultID)
-		if ok and type(searchResult) == "table" and type(searchResult.leaderName) == "string" then
-			local fullName = ns.GetFullName(searchResult.leaderName)
-			if fullName then
-				ns.AppendNotesToTooltip(tooltip, fullName)
-			end
-		end
+		ns.AppendLFGSearchResultTooltip(tooltip, resultID)
 	end)
 end

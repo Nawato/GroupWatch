@@ -23,6 +23,7 @@ local type = G.type
 local math_max, math_min, math_abs = G.math_max, G.math_min, G.math_abs
 local tinsert = G.tinsert
 local print = G.print
+local tconcat = table.concat
 
 -- The main window frame, created lazily by CreateUI().
 ns.GroupWatchUI = nil
@@ -243,6 +244,44 @@ end
 
 -- Test hook: exercise the per-refresh cached skin path without a window.
 ns._SkinButtonCached = SkinButtonCached
+
+--- Build one auto-action toggle. Menu:CreateCheckbox expects isSelected to be a
+--- function: Menu:IsSelected() calls self.isSelected(self:GetData()), so a
+--- boolean would throw when the menu is rendered. The getter re-reads the
+--- saved setting every time, and toggling refreshes the window.
+local function BuildAutoToggle(menu, listName, labelKey, field, refresh)
+	local fallbackLabel = field == "autoAccept" and "Auto Accept" or "Auto Decline"
+	local label = L[labelKey] or fallbackLabel
+
+	local function GetChecked()
+		local ld = GroupWatchDB.lists[listName]
+		return type(ld) == "table" and ld[field] == true
+	end
+
+	local function Toggle()
+		local ld = GroupWatchDB.lists[listName]
+		if type(ld) ~= "table" then
+			return
+		end
+		ld[field] = not ld[field]
+		if type(refresh) == "function" then
+			refresh()
+		end
+	end
+
+	if type(menu.CreateCheckbox) == "function" then
+		local okBox = pcall(menu.CreateCheckbox, menu, label, GetChecked, Toggle)
+		if okBox then
+			return
+		end
+	end
+	-- Older Menu API fallback: keep the state visible in the label instead of
+	-- using a checkbox.
+	menu:CreateButton((GetChecked() and "[x] " or "[ ] ") .. label, Toggle)
+end
+
+-- Test hook: exercise the checkbox builder without a live context menu.
+ns._BuildAutoToggle = BuildAutoToggle
 
 -- ---------------------------------------------------------------------------
 -- Refresh callback (overrides the no-op stub from Core.lua)
@@ -506,6 +545,24 @@ local function CreateUI()
 								ns.BuildSoundMenu(soundSubMenu, listName, function()
 									f:Refresh()
 								end)
+
+								-- Auto actions (direct invites only; LFG stays manual)
+								local autoSubMenu = rootDescription:CreateButton(L["AUTO_ACTIONS"] or "Auto Actions")
+								BuildAutoToggle(autoSubMenu, listName, "AUTO_ACCEPT", "autoAccept", function()
+									f:Refresh()
+								end)
+								BuildAutoToggle(autoSubMenu, listName, "AUTO_DECLINE", "autoDecline", function()
+									f:Refresh()
+								end)
+
+								-- Informational, non-clickable line: the client does
+								-- not allow unattended LFG applicant decisions.
+								local lfgInfo = autoSubMenu:CreateButton(
+									L["AUTO_LFG_MANUAL"] or "LFG applicant decisions require a manual click."
+								)
+								if type(lfgInfo.SetEnabled) == "function" then
+									lfgInfo:SetEnabled(false)
+								end
 							end)
 						end
 					else
@@ -599,6 +656,29 @@ local function CreateUI()
 			soundBtn:SetText(ns.GetSoundButtonLabel(lData.sound))
 			soundBtn:Show()
 			SkinButtonCached(soundBtn, skinCache)
+
+			-- Auto action badge (A = accept, D = decline) next to the header.
+			-- The add button occupies the far right, so leave room for it.
+			local autoBadge = headerRow.autoBadge
+			if not autoBadge then
+				autoBadge = headerRow:CreateFontString(nil, "OVERLAY", "GameFontNormalSmall")
+				autoBadge:SetPoint("RIGHT", headerRow, "RIGHT", -28, 0)
+				headerRow.autoBadge = autoBadge
+			end
+			SkinText(autoBadge)
+			local badgeParts = {}
+			if lData.autoAccept == true then
+				badgeParts[#badgeParts + 1] = "|cff00ff00A|r"
+			end
+			if lData.autoDecline == true then
+				badgeParts[#badgeParts + 1] = "|cffff5555D|r"
+			end
+			if #badgeParts > 0 then
+				autoBadge:SetText(tconcat(badgeParts, "/"))
+				autoBadge:Show()
+			else
+				autoBadge:Hide()
+			end
 
 			-- (+) Button to add player to list
 			local addPlayerBtn = ns.GetWidget("addPlayerBtn", function()

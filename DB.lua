@@ -12,10 +12,11 @@ local ADDON_NAME, ns = ...
 
 local G = ns.Globals
 local L = ns.L
-local pairs, print = G.pairs, G.print
+local pairs, ipairs, print = G.pairs, G.ipairs, G.print
 local type = G.type
 local string_format = G.string_format
 local table_insert = G.table_insert
+local table_sort = G.table_sort
 
 -- ---------------------------------------------------------------------------
 -- Schema
@@ -31,6 +32,8 @@ function ns.InitDB()
 				message = L["DEFAULT_GROUP_MSG"],
 				sound = ns.DEFAULT_SOUND,
 				collapsed = false,
+				autoAccept = false,
+				autoDecline = false,
 				players = {},
 				notes = {},
 			},
@@ -55,6 +58,8 @@ function ns.InitDB()
 				message = L["DEFAULT_GROUP_MSG"],
 				sound = ns.DEFAULT_SOUND,
 				collapsed = false,
+				autoAccept = false,
+				autoDecline = false,
 				players = {},
 				notes = {},
 			}
@@ -64,6 +69,12 @@ function ns.InitDB()
 			end
 			if type(listData.notes) ~= "table" then
 				listData.notes = {}
+			end
+			if type(listData.autoAccept) ~= "boolean" then
+				listData.autoAccept = false
+			end
+			if type(listData.autoDecline) ~= "boolean" then
+				listData.autoDecline = false
 			end
 		end
 	end
@@ -80,6 +91,16 @@ local watchedIndex = nil
 --- change list membership has to call this before refreshing the UI.
 function ns.InvalidateWatchedIndex()
 	watchedIndex = nil
+end
+
+--- Sort each membership list once when the index is built so callers get a
+--- stable order (the Lua `pairs` iteration order is not deterministic).
+local function SortWatchedIndex(index)
+	for _, lists in pairs(index) do
+		-- A hand-edited SavedVariables file could contain non-string list
+		-- names; a failed comparison must not break the index.
+		pcall(table_sort, lists)
+	end
 end
 
 --- Reverse index of every watched character: fullName -> { listName, ... }.
@@ -106,8 +127,47 @@ function ns.GetWatchedIndex()
 		end
 	end
 
+	SortWatchedIndex(index)
 	watchedIndex = index
 	return index
+end
+
+--- Pick the auto action for a watched character.
+---
+--- Returns "decline"/"accept" plus the list that supplies the decision.
+--- Decline always wins when several lists disagree, because declining is the
+--- safer action. Returns nil when no list asks for an automatic action.
+function ns.GetAutoAction(fullName)
+	if type(fullName) ~= "string" or fullName == "" then
+		return nil
+	end
+	if type(GroupWatchDB) ~= "table" or type(GroupWatchDB.lists) ~= "table" then
+		return nil
+	end
+
+	local watched = ns.GetWatchedIndex()
+	local lists = watched and watched[fullName]
+	if type(lists) ~= "table" then
+		return nil
+	end
+
+	local acceptList = nil
+	for _, listName in ipairs(lists) do
+		local listData = GroupWatchDB.lists[listName]
+		if type(listData) == "table" then
+			if listData.autoDecline == true then
+				return "decline", listName
+			end
+			if listData.autoAccept == true and acceptList == nil then
+				acceptList = listName
+			end
+		end
+	end
+
+	if acceptList ~= nil then
+		return "accept", acceptList
+	end
+	return nil
 end
 
 -- ---------------------------------------------------------------------------
@@ -263,6 +323,8 @@ function ns.CreateList(listName)
 		message = L["DEFAULT_GROUP_MSG"],
 		sound = ns.DEFAULT_SOUND,
 		collapsed = false,
+		autoAccept = false,
+		autoDecline = false,
 		players = {},
 		notes = {},
 	}

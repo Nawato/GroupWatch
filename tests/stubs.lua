@@ -24,6 +24,25 @@ Stubs = {
 	playedSounds = {},
 	printLog = {},
 	locale = "enUS",
+	-- Auto actions / LFG applicant stubs
+	secretValues = {}, -- value -> truthy for issecretvalue
+	noAccessTables = {}, -- table -> truthy for canaccesstable
+	lockdown = false,
+	restrictionState = nil,
+	time = 0,
+	accepted = 0,
+	declined = 0,
+	popupHidden = {},
+	unitRoles = {},
+	applicants = {},
+	applicantInfo = {}, -- token -> info table or { err=... }
+	applicantMembers = {}, -- token -> { [index] = { name=..., tank=..., ... } }
+	activeEntry = nil, -- table or { err=... }
+	activityInfo = {}, -- activityID -> info table or { err=... }
+	numInvited = 0,
+	getApplicantsCalls = 0,
+	lfgInviteCalls = {},
+	lfgDeclineCalls = {},
 }
 
 function Stubs.reset()
@@ -43,6 +62,24 @@ function Stubs.reset()
 	Stubs.playedSounds = {}
 	Stubs.printLog = {}
 	Stubs.locale = "enUS"
+	Stubs.secretValues = {}
+	Stubs.noAccessTables = {}
+	Stubs.lockdown = false
+	Stubs.restrictionState = nil
+	Stubs.time = 0
+	Stubs.accepted = 0
+	Stubs.declined = 0
+	Stubs.popupHidden = {}
+	Stubs.unitRoles = {}
+	Stubs.applicants = {}
+	Stubs.applicantInfo = {}
+	Stubs.applicantMembers = {}
+	Stubs.activeEntry = nil
+	Stubs.activityInfo = {}
+	Stubs.numInvited = 0
+	Stubs.getApplicantsCalls = 0
+	Stubs.lfgInviteCalls = {}
+	Stubs.lfgDeclineCalls = {}
 	GroupWatchDB = nil
 end
 
@@ -195,7 +232,106 @@ C_LFGList = {
 		end
 		return r
 	end,
+	GetApplicants = function()
+		Stubs.getApplicantsCalls = Stubs.getApplicantsCalls + 1
+		return Stubs.applicants
+	end,
+	GetApplicantInfo = function(token)
+		local info = Stubs.applicantInfo[token]
+		if type(info) == "table" and info.err then
+			error(info.err)
+		end
+		return info
+	end,
+	GetApplicantMemberInfo = function(token, index)
+		local members = Stubs.applicantMembers[token]
+		local member = type(members) == "table" and members[index] or nil
+		if type(member) == "table" and member.err then
+			error(member.err)
+		end
+		if type(member) ~= "table" then
+			return nil
+		end
+		return member.name, member.class, member.localizedClass, member.level, member.itemLevel, member.honorLevel,
+			member.tank, member.healer, member.damage, member.assignedRole, member.relationship
+	end,
+	GetActiveEntryInfo = function()
+		local entry = Stubs.activeEntry
+		if type(entry) == "table" and entry.err then
+			error(entry.err)
+		end
+		return entry
+	end,
+	GetActivityInfoTable = function(activityID)
+		local info = Stubs.activityInfo[activityID]
+		if type(info) == "table" and info.err then
+			error(info.err)
+		end
+		return info
+	end,
+	GetNumInvitedApplicantMembers = function()
+		return Stubs.numInvited
+	end,
+	InviteApplicant = function(token)
+		Stubs.lfgInviteCalls[#Stubs.lfgInviteCalls + 1] = token
+	end,
+	DeclineApplicant = function(token)
+		Stubs.lfgDeclineCalls[#Stubs.lfgDeclineCalls + 1] = token
+	end,
 }
+
+function issecretvalue(value)
+	return Stubs.secretValues[value] == true
+end
+
+function canaccessvalue(value)
+	if Stubs.secretValues[value] == true then
+		return false
+	end
+	return true
+end
+
+function canaccesstable(tbl)
+	return Stubs.noAccessTables[tbl] ~= true
+end
+
+C_ChatInfo = {
+	InChatMessagingLockdown = function()
+		return Stubs.lockdown
+	end,
+}
+
+C_RestrictedActions = {
+	GetAddOnRestrictionState = function()
+		return Stubs.restrictionState
+	end,
+}
+
+LE_PARTY_CATEGORY_HOME = 1
+
+function GetTime()
+	return Stubs.time
+end
+
+function UnitGroupRolesAssigned(unit)
+	local role = Stubs.unitRoles[unit]
+	if type(role) == "table" and role.err then
+		error(role.err)
+	end
+	return role
+end
+
+function AcceptGroup()
+	Stubs.accepted = Stubs.accepted + 1
+end
+
+function DeclineGroup()
+	Stubs.declined = Stubs.declined + 1
+end
+
+function StaticPopup_Hide(which)
+	Stubs.popupHidden[#Stubs.popupHidden + 1] = which
+end
 
 -- Capture addon output instead of printing it.
 function print(...)

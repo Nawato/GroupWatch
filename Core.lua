@@ -67,11 +67,20 @@ ns.Globals = {
 	IsLoggedIn = IsLoggedIn,
 	hooksecurefunc = hooksecurefunc,
 	StaticPopup_Show = StaticPopup_Show,
+	StaticPopup_Hide = StaticPopup_Hide,
+	AcceptGroup = AcceptGroup,
+	DeclineGroup = DeclineGroup,
 	GetPlayerInfoByGUID = GetPlayerInfoByGUID,
+	GetTime = GetTime,
+	UnitGroupRolesAssigned = UnitGroupRolesAssigned,
+	C_ChatInfo = C_ChatInfo,
+	C_RestrictedActions = C_RestrictedActions,
+	LE_PARTY_CATEGORY_HOME = LE_PARTY_CATEGORY_HOME,
 	string_format = string.format,
 	string_len = string.len,
 	string_gsub = string.gsub,
 	string_lower = string.lower,
+	string_find = string.find,
 	table_insert = table.insert,
 	table_sort = table.sort,
 	wipe = wipe,
@@ -208,6 +217,68 @@ function ns.GetDisplayName(fullName)
 		end
 	end
 	return fullName
+end
+
+--- Resolve a global by name at call time. Used for the secret-value guards,
+--- which are absent on older clients and must stay testable/injectable.
+local function ResolveGlobal(name)
+	local g = ns.Globals
+	local value = g[name]
+	if value == nil and type(_G) == "table" then
+		value = rawget(_G, name)
+	end
+	return value
+end
+
+--- True when a value may be read safely outside the client's secret-value
+--- sandbox. `issecretvalue`/`canaccessvalue` are 12.0+ APIs: on older clients
+--- (or in tests) the helpers are absent and every plain Lua value passes.
+--- Never throws.
+function ns.IsPlainValue(value)
+	local issecretvalue = ResolveGlobal("issecretvalue")
+	if type(issecretvalue) == "function" then
+		local ok, isSecret = pcall(issecretvalue, value)
+		if ok and isSecret == true then
+			return false
+		end
+	end
+
+	local canaccessvalue = ResolveGlobal("canaccessvalue")
+	if type(canaccessvalue) == "function" then
+		local ok, canAccess = pcall(canaccessvalue, value)
+		if ok and canAccess == false then
+			return false
+		end
+	end
+
+	return true
+end
+
+--- True when a table may be indexed safely. `canaccesstable` is 12.0+; when
+--- absent the table is assumed accessible and the caller's own type checks
+--- decide. Never throws.
+function ns.CanAccessTable(tbl)
+	if type(tbl) ~= "table" then
+		return false
+	end
+	local canaccesstable = ResolveGlobal("canaccesstable")
+	if type(canaccesstable) == "function" then
+		local ok, canAccess = pcall(canaccesstable, tbl)
+		if ok and canAccess == false then
+			return false
+		end
+	end
+	return true
+end
+
+--- Append the generic "restricted by the client" line to a tooltip. Used by
+--- the LFG tooltip paths when a secret value prevents reading the data.
+function ns.AppendRestrictedTooltipLine(tooltip)
+	if type(tooltip) ~= "table" or type(tooltip.AddLine) ~= "function" then
+		return
+	end
+	local line = "|cff00ccffGroupWatch:|r " .. (L["MSG_LFG_RESTRICTED"] or "LFG applicant details are restricted.")
+	pcall(tooltip.AddLine, tooltip, line, 0.7, 0.7, 0.7, true)
 end
 
 -- ---------------------------------------------------------------------------
